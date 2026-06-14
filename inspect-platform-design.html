@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inspect Control Plane — Platform Design</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS — "Control Console" instrument-panel aesthetic
+   Light lab-bench palette (no dark mode), paired with the
+   serving-optimization document.
+     --void    #f4f6f8  bench surface (page canvas)
+     --panel   #ffffff  raised instrument panel
+     --panel-2 #eef2f6  inset / secondary panel
+     --line    #c8d2de  hairline rules / borders
+     --ink     #11202e  primary text
+     --muted   #5f7286  secondary text
+     --signal  #0f9e8c  primary signal (healthy/teal) — the one bold accent
+     --amber   #c2740f  warn / passive-action
+     --rose    #d23b63  alert / active-action
+     --iris    #4763d0  links / git
+   Type:
+     display : "Space Grotesk" — characteristic, used with restraint
+     body    : "Inter"
+     mono    : "JetBrains Mono" — the utility/data face, the workhorse here
+   Signature: a persistent telemetry strip + status-LED system that
+   treats every section header as a labeled panel on a console.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+:root{
+  --void:#f4f6f8; --panel:#ffffff; --panel-2:#eef2f6; --line:#c8d2de;
+  --ink:#11202e; --muted:#5f7286; --signal:#0f9e8c; --amber:#c2740f;
+  --rose:#d23b63; --iris:#4763d0;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --body:'Inter',system-ui,sans-serif;
+  --disp:'Space Grotesk',var(--body);
+}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--void); color:var(--ink); font-family:var(--body);
+  line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 28px;}
+
+/* ---- telemetry strip (signature, persistent top rail) ---- */
+.rail{
+  position:sticky; top:0; z-index:50; background:rgba(244,246,248,.9);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
+  font-family:var(--mono); font-size:11px; letter-spacing:.04em;
+}
+.rail .wrap{display:flex; align-items:center; gap:22px; height:46px; overflow:hidden;}
+.rail .brand{color:var(--ink); font-weight:700; letter-spacing:.06em;}
+.rail .brand b{color:var(--signal);}
+.rail .metric{color:var(--muted); white-space:nowrap;}
+.rail .metric span{color:var(--ink);}
+.led{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px;
+  background:var(--signal); box-shadow:0 0 0 3px rgba(15,158,140,.18); vertical-align:middle;
+  animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.rail nav{margin-left:auto; display:flex; gap:18px;}
+.rail nav a{color:var(--muted); text-decoration:none; transition:color .2s;}
+.rail nav a:hover{color:var(--signal);}
+
+/* ---- hero: reads like a live status panel, not a billboard ---- */
+.hero{padding:84px 0 56px; border-bottom:1px solid var(--line); position:relative;}
+.eyebrow{font-family:var(--mono); font-size:12px; color:var(--signal);
+  letter-spacing:.22em; text-transform:uppercase; margin-bottom:20px;}
+.hero h1{font-family:var(--disp); font-weight:700; font-size:clamp(34px,6vw,60px);
+  line-height:1.04; letter-spacing:-.02em; margin-bottom:22px;}
+.hero h1 em{font-style:normal; color:var(--signal);}
+.hero .lede{font-size:18px; color:var(--muted); max-width:62ch; margin-bottom:34px;}
+.statusgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+.statusgrid .cell{background:var(--panel); padding:18px 20px;}
+.statusgrid .k{font-family:var(--mono); font-size:11px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px;}
+.statusgrid .v{font-family:var(--disp); font-size:26px; font-weight:600; color:var(--ink);}
+.statusgrid .v small{font-size:13px; color:var(--signal); font-family:var(--mono); font-weight:400;}
+
+/* ---- section scaffolding: each is a labeled console panel ---- */
+section{padding:64px 0; border-bottom:1px solid var(--line);}
+.sec-label{font-family:var(--mono); font-size:12px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; gap:12px; align-items:center;}
+.sec-label .tag{color:var(--signal); border:1px solid var(--line); border-radius:4px;
+  padding:2px 8px; background:var(--panel);}
+h2{font-family:var(--disp); font-weight:600; font-size:clamp(24px,3.4vw,34px);
+  letter-spacing:-.01em; margin-bottom:14px; line-height:1.12;}
+.sec-intro{color:var(--muted); max-width:70ch; font-size:16px; margin-bottom:30px;}
+h3{font-family:var(--disp); font-weight:600; font-size:18px; margin:26px 0 10px;}
+p{margin-bottom:14px;} p:last-child{margin-bottom:0;}
+a{color:var(--iris);}
+
+/* ---- panels & grids ---- */
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:24px;}
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+.grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+.cap{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:22px; position:relative; transition:border-color .2s, transform .2s;}
+.cap:hover{border-color:var(--signal); transform:translateY(-2px);}
+.cap .ico{font-family:var(--mono); font-size:11px; color:var(--signal);
+  letter-spacing:.1em; margin-bottom:12px; display:block;}
+.cap h3{margin:0 0 8px; font-size:17px;}
+.cap p{font-size:14px; color:var(--muted); margin:0;}
+.cap ul{margin:10px 0 0; padding-left:0; list-style:none;}
+.cap li{font-size:13px; color:var(--muted); padding:4px 0 4px 18px; position:relative;}
+.cap li::before{content:"›"; position:absolute; left:2px; color:var(--signal);}
+
+ul.clean{list-style:none; padding:0;}
+ul.clean li{padding:9px 0 9px 22px; position:relative; border-bottom:1px solid var(--line); color:var(--muted);}
+ul.clean li:last-child{border-bottom:none;}
+ul.clean li::before{content:"■"; position:absolute; left:0; color:var(--signal); font-size:9px; top:13px;}
+ul.clean li b{color:var(--ink); font-weight:600;}
+
+/* ---- code / terminal blocks ---- */
+pre{background:#0e1820; border:1px solid var(--line); border-radius:10px;
+  padding:18px 20px; overflow-x:auto; font-family:var(--mono); font-size:12.5px;
+  line-height:1.6; color:#d6e0ea; margin:8px 0;}
+pre .c{color:#5b7387;}            /* comment */
+pre .k{color:#7fb0ff;}            /* keyword */
+pre .s{color:#8be09a;}            /* string/value */
+pre .a{color:#e0b974;}            /* attr */
+code{font-family:var(--mono); font-size:.9em; background:var(--panel-2);
+  padding:1px 6px; border-radius:4px; color:#0c7e70;}
+.diagram{margin:8px 0 6px;}
+.diagram figcaption{font-family:var(--mono); font-size:11px; color:var(--muted);
+  letter-spacing:.04em; margin-top:8px; padding-left:2px;}
+.diagram figcaption b{color:var(--signal); font-weight:500;}
+
+/* ---- scope ladder (account → granular) ---- */
+.ladder{display:grid; grid-template-columns:130px 1fr; gap:0; border:1px solid var(--line);
+  border-radius:12px; overflow:hidden;}
+.ladder .lvl{background:var(--panel-2); padding:18px 16px; border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line); font-family:var(--mono); font-size:12px; color:var(--signal);
+  letter-spacing:.06em; display:flex; align-items:center;}
+.ladder .desc{background:var(--panel); padding:18px 20px; border-bottom:1px solid var(--line); font-size:14px; color:var(--muted);}
+.ladder .lvl:last-of-type, .ladder .desc:last-of-type{border-bottom:none;}
+.ladder .desc b{color:var(--ink);}
+
+/* ---- the dashboard mock (signature interactive piece) ---- */
+.dash{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+.dash-top{display:flex; align-items:center; gap:14px; padding:14px 18px;
+  border-bottom:1px solid var(--line); background:var(--panel-2); font-family:var(--mono); font-size:12px;}
+.dash-top .dot{width:10px;height:10px;border-radius:50%;}
+.dash-tabs{display:flex; gap:4px; padding:12px 14px 0; flex-wrap:wrap;}
+.dash-tab{font-family:var(--mono); font-size:12px; padding:8px 14px; border:1px solid var(--line);
+  border-bottom:none; border-radius:8px 8px 0 0; background:var(--panel-2); color:var(--muted);
+  cursor:pointer; transition:all .15s;}
+.dash-tab:hover{color:var(--ink);}
+.dash-tab.on{background:var(--panel); color:var(--signal); border-color:var(--signal); border-bottom:1px solid var(--panel);}
+.dash-body{border-top:1px solid var(--line); padding:22px; min-height:280px;}
+.dash-pane{display:none; animation:fade .25s ease;}
+.dash-pane.on{display:block;}
+@keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
+.kpi{background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+.kpi .k{font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
+.kpi .v{font-family:var(--disp); font-size:24px; font-weight:600; margin-top:6px;}
+.kpi .v.up{color:var(--signal);} .kpi .v.warn{color:var(--amber);} .kpi .v.hot{color:var(--rose);}
+.bars{display:flex; align-items:flex-end; gap:8px; height:120px; padding-top:10px;}
+.bar{flex:1; background:linear-gradient(180deg,var(--signal),rgba(15,158,140,.28)); border-radius:4px 4px 0 0; min-height:6px;
+  position:relative; transition:height .4s;}
+.bar span{position:absolute; top:-18px; left:0; right:0; text-align:center;
+  font-family:var(--mono); font-size:10px; color:var(--muted);}
+.runrow{display:grid; grid-template-columns:auto 1fr auto auto auto; gap:14px; align-items:center;
+  padding:11px 0; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12.5px;}
+.runrow:last-child{border-bottom:none;}
+.pill{font-family:var(--mono); font-size:10px; padding:3px 9px; border-radius:20px; letter-spacing:.05em;}
+.pill.ok{background:rgba(15,158,140,.12); color:var(--signal); border:1px solid rgba(15,158,140,.35);}
+.pill.run{background:rgba(71,99,208,.10); color:var(--iris); border:1px solid rgba(71,99,208,.32);}
+.pill.warn{background:rgba(194,116,15,.12); color:var(--amber); border:1px solid rgba(194,116,15,.32);}
+.act{display:flex; gap:8px; flex-wrap:wrap;}
+.btn{font-family:var(--mono); font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--ink); transition:all .15s;}
+.btn:hover{border-color:var(--signal); color:var(--signal);}
+.btn.active{border-color:var(--rose); color:var(--rose);}
+.btn.active:hover{background:rgba(210,59,99,.10);}
+.actions-note{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:16px;
+  padding:12px; background:var(--panel-2); border-radius:8px; border-left:2px solid var(--amber);}
+.actions-note b.passive{color:var(--amber);} .actions-note b.active{color:var(--rose);}
+
+/* ---- two-tone action legend ---- */
+.legend{display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-family:var(--mono); font-size:12px;}
+.legend span{display:flex; align-items:center; gap:8px; color:var(--muted);}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+/* ---- finops ledger ---- */
+table.ledger{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;}
+table.ledger th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line);}
+table.ledger td{padding:11px 12px; border-bottom:1px solid var(--line); color:var(--muted);}
+table.ledger td b{color:var(--ink);} table.ledger tr:last-child td{border-bottom:none;}
+table.ledger .num{font-family:var(--mono); text-align:right; color:var(--ink);}
+table.ledger .save{color:var(--signal);}
+
+/* ---- phase timeline ---- */
+.timeline{position:relative; padding-left:30px;}
+.timeline::before{content:""; position:absolute; left:7px; top:6px; bottom:6px; width:2px; background:var(--line);}
+.tl{position:relative; margin-bottom:26px;}
+.tl::before{content:""; position:absolute; left:-30px; top:4px; width:16px; height:16px; border-radius:50%;
+  background:var(--void); border:2px solid var(--signal); box-shadow:0 0 0 3px rgba(15,158,140,.14);}
+.tl .wk{font-family:var(--mono); font-size:11px; color:var(--signal); letter-spacing:.08em; text-transform:uppercase;}
+.tl h3{margin:4px 0 6px;}
+.tl p{font-size:14px; color:var(--muted); margin:0;}
+
+footer{padding:48px 0 70px; color:var(--muted); font-family:var(--mono); font-size:12px;}
+footer b{color:var(--ink);}
+
+/* ---- responsive ---- */
+@media(max-width:820px){
+  .statusgrid{grid-template-columns:repeat(2,1fr);}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .kpis{grid-template-columns:repeat(2,1fr);}
+  .ladder{grid-template-columns:90px 1fr;}
+  .rail nav{display:none;}
+  .runrow{grid-template-columns:auto 1fr; gap:8px;}
+  .runrow .pill,.runrow .act{grid-column:2;}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none !important; transition:none !important; scroll-behavior:auto;}
+}
+:focus-visible{outline:2px solid var(--signal); outline-offset:2px;}
+
+/* ---- table of contents ---- */
+.toc-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:8px;}
+.toc-grid a{display:block; text-decoration:none; padding:14px 16px; background:var(--panel);
+  border:1px solid var(--line); border-radius:10px; transition:border-color .2s, transform .2s;}
+.toc-grid a:hover{border-color:var(--signal); transform:translateY(-2px);}
+.toc-grid .n{font-family:var(--mono); font-size:11px; color:var(--signal); letter-spacing:.08em;}
+.toc-grid .t{display:block; color:var(--ink); font-size:15px; font-weight:600; font-family:var(--disp); margin-top:3px;}
+.toc-grid .d{display:block; color:var(--muted); font-size:12.5px; margin-top:4px; line-height:1.45;}
+@media(max-width:820px){.toc-grid{grid-template-columns:1fr;}}
+
+/* ---- workflow step ladder ---- */
+.steps{counter-reset:step; display:grid; gap:12px; margin-top:8px;}
+.step{display:grid; grid-template-columns:38px 1fr; gap:14px; align-items:start;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+.step::before{counter-increment:step; content:counter(step); font-family:var(--mono); font-weight:700;
+  font-size:14px; color:var(--signal); background:var(--panel-2); border:1px solid var(--line);
+  border-radius:8px; width:38px; height:38px; display:flex; align-items:center; justify-content:center;}
+.step h3{margin:0 0 3px; font-size:15px;}
+.step p{margin:0; font-size:13.5px; color:var(--muted);}
+
+/* ---- floating contents / top button ---- */
+.fab{position:fixed; right:20px; bottom:20px; z-index:60; display:flex; flex-direction:column; gap:8px;}
+.fab a{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11px; letter-spacing:.04em;
+  text-decoration:none; padding:10px 14px; border-radius:24px; background:var(--panel);
+  border:1px solid var(--line); color:var(--muted); box-shadow:0 6px 22px -12px rgba(17,32,46,.55); transition:all .2s;}
+.fab a:hover{border-color:var(--signal); color:var(--signal); transform:translateY(-1px);}
+.fab a b{color:var(--signal); font-weight:700;}
+@media(max-width:820px){.fab a span{display:none;}}
+</style>
+</head>
+<body>
+
+<!-- ===== telemetry rail (signature) ===== -->
+<div class="rail"><div class="wrap">
+  <div class="brand"><span class="led"></span>INSPECT·<b>CTRL</b></div>
+  <div class="metric">acct <span>aws:eval-prod</span></div>
+  <div class="metric">runs <span>1,284</span></div>
+  <div class="metric">idle&nbsp;cost <span>$0.00/hr</span></div>
+  <nav>
+    <a href="#toc">Contents</a>
+    <a href="#eval-basics">Evals 101</a>
+    <a href="#simple-workflow">Simple</a>
+    <a href="#complex-workflow">Complex</a>
+    <a href="#capabilities">Capabilities</a>
+    <a href="#cost">Cost</a>
+    <a href="#plan">Plan</a>
+  </nav>
+</div></div>
+
+<!-- ===== hero ===== -->
+<header class="hero" id="top"><div class="wrap">
+  <div class="eyebrow">Open-Source AI Infrastructure · Platform Design</div>
+  <h1>A control plane for running <em>Inspect</em> evaluations<br>at scale — observable, governed, FinOps-ready.</h1>
+  <p class="lede"><b>The goal:</b> an open-source platform that anyone can deploy to run the full range of UK AISI Inspect evaluations — from lightweight model-graded jobs to heavy agentic, sandboxed jobs — without re-inventing the infrastructure each time. Everything is declared in Terraform and delivered through GitOps from a single repository, with logging, observability, and network inspectability wired in at both the account level and the per-run level, and GPU compute portable across AWS and external providers.</p>
+  <div class="statusgrid">
+    <div class="cell"><div class="k">Execution backends</div><div class="v">2 <small>Fargate · K8s</small></div></div>
+    <div class="cell"><div class="k">GPU providers</div><div class="v">4 <small>AWS·RunPod·Lambda·CoreWeave</small></div></div>
+    <div class="cell"><div class="k">Delivery</div><div class="v">GitOps <small>PR-gated</small></div></div>
+    <div class="cell"><div class="k">Idle GPU cost</div><div class="v up">$0 <small>scale-to-zero</small></div></div>
+  </div>
+</div></header>
+
+<!-- ===== orientation ===== -->
+<section><div class="wrap">
+  <div class="sec-label"><span class="tag">00</span> Orientation</div>
+  <h2>What this document is</h2>
+  <p class="sec-intro">This is the design specification for an <b>open-source evaluation platform</b> — free for any team to clone, deploy, and run. It covers what an eval actually is and how Inspect runs one, the infrastructure a simple workflow needs versus a complex one, the third-party dependencies it relies on, the capability layers and how each is provisioned in Terraform, how account-level and granular controls relate, how GPU compute stays portable across providers, and the GitOps flow that delivers all of it. It is written to be the architecture document that lives at the root of the repository.</p>
+  <div class="grid-3">
+    <div class="cap"><span class="ico">// WORKLOAD</span><h3>Inspect jobs</h3><p>Model-graded and agentic/sandboxed evals from the <code>inspect_evals</code> collection, run as jobs rather than from a laptop.</p></div>
+    <div class="cap"><span class="ico">// SUBSTRATE</span><h3>IaC + GitOps</h3><p>Every resource declared in Terraform, delivered through PR-gated pipelines. The control plane stays on AWS; GPU compute is portable across providers.</p></div>
+    <div class="cap"><span class="ico">// SURFACE</span><h3>One dashboard</h3><p>A single console for passive inspection and active control, from account-wide health down to a single run's trace.</p></div>
+  </div>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 660" width="100%" role="img" aria-label="System architecture diagram" font-family="'JetBrains Mono',monospace">
+  <defs><marker id="ah1" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7.5,3 L0,6 Z" fill="var(--signal)"/></marker></defs>
+  <rect x="210" y="18" width="340" height="52" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="210" y="18" width="4" height="52" rx="2" fill="var(--iris)"/>
+  <text x="380" y="40" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">GIT REPOSITORY · single source of truth</text>
+  <text x="380" y="57" text-anchor="middle" font-size="9.5" fill="var(--muted)">infra/ · eval-specs/ · .github/workflows/</text>
+  <line x1="380" y1="70" x2="380" y2="146" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ah1)"/>
+  <text x="392" y="92" text-anchor="start" font-size="9.5" fill="var(--muted)">GitOps · PR -&gt; plan -&gt; apply</text>
+  <rect x="40" y="108" width="680" height="404" rx="14" fill="rgba(71,99,208,0.04)" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="58" y="128" text-anchor="start" font-size="10" fill="var(--iris)" font-weight="600">AWS · control-plane home (state + control stay here)</text>
+  <rect x="58" y="150" width="170" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="58" y="150" width="4" height="56" rx="2" fill="var(--amber)"/>
+  <text x="146" y="174" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Dashboard</text>
+  <text x="146" y="191" text-anchor="middle" font-size="9" fill="var(--muted)">console · passive + active</text>
+  <rect x="270" y="150" width="220" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="270" y="150" width="4" height="56" rx="2" fill="var(--signal)"/>
+  <text x="380" y="174" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Control plane / API</text>
+  <text x="380" y="191" text-anchor="middle" font-size="9" fill="var(--muted)">Fargate · provider router</text>
+  <line x1="228" y1="172" x2="266" y2="172" stroke="var(--signal)" stroke-width="1.5" marker-end="url(#ah1)"/>
+  <line x1="270" y1="188" x2="232" y2="188" stroke="var(--line)" stroke-width="1.3" marker-end="url(#ah1)"/>
+  <text x="380" y="228" text-anchor="middle" font-size="9.5" fill="var(--muted)">routes by {sandbox · model · provider}</text>
+  <rect x="80" y="250" width="250" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="80" y="250" width="4" height="56" rx="2" fill="var(--signal)"/>
+  <text x="205" y="274" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Fargate executor</text>
+  <text x="205" y="291" text-anchor="middle" font-size="9" fill="var(--muted)">non-sandbox evals</text>
+  <rect x="430" y="250" width="250" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="430" y="250" width="4" height="56" rx="2" fill="var(--rose)"/>
+  <text x="555" y="274" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Sandbox executor</text>
+  <text x="555" y="291" text-anchor="middle" font-size="9" fill="var(--muted)">K8s + AISI sandbox</text>
+  <line x1="360" y1="206" x2="215" y2="246" stroke="var(--signal)" stroke-width="1.5" marker-end="url(#ah1)"/>
+  <line x1="400" y1="206" x2="545" y2="246" stroke="var(--signal)" stroke-width="1.5" marker-end="url(#ah1)"/>
+  <rect x="80" y="358" width="250" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="80" y="358" width="4" height="56" rx="2" fill="var(--iris)"/>
+  <text x="205" y="382" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">S3 · RDS</text>
+  <text x="205" y="399" text-anchor="middle" font-size="9" fill="var(--muted)">logs + run metadata</text>
+  <rect x="430" y="358" width="250" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="430" y="358" width="4" height="56" rx="2" fill="var(--signal)"/>
+  <text x="555" y="382" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">EKS GPU nodes (spot)</text>
+  <text x="555" y="399" text-anchor="middle" font-size="9" fill="var(--muted)">default GPU target</text>
+  <line x1="205" y1="306" x2="205" y2="354" stroke="var(--signal)" stroke-width="1.5" marker-end="url(#ah1)"/>
+  <text x="214" y="334" text-anchor="start" font-size="9" fill="var(--muted)">logs</text>
+  <line x1="555" y1="306" x2="555" y2="354" stroke="var(--signal)" stroke-width="1.5" marker-end="url(#ah1)"/>
+  <text x="564" y="334" text-anchor="start" font-size="9" fill="var(--muted)">GPU pods</text>
+  <text x="205" y="446" text-anchor="middle" font-size="9" fill="var(--muted)">observability · audit · FinOps</text>
+  <text x="205" y="459" text-anchor="middle" font-size="9" fill="var(--muted)">(tiered, opt-in)</text>
+  <rect x="455" y="436" width="225" height="34" rx="8" fill="var(--panel-2)" stroke="var(--line)" stroke-width="1.3"/>
+  <text x="567" y="457" text-anchor="middle" font-size="10.5" fill="var(--ink)" font-weight="600">provider router</text>
+  <line x1="555" y1="414" x2="555" y2="432" stroke="var(--signal)" stroke-width="1.5" marker-end="url(#ah1)"/>
+  <text x="380" y="540" text-anchor="middle" font-size="9.5" fill="var(--muted)">external GPU providers · burst / overflow</text>
+  <line x1="567" y1="470" x2="240" y2="552" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah1)"/>
+  <line x1="567" y1="470" x2="380" y2="552" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah1)"/>
+  <line x1="567" y1="470" x2="540" y2="552" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah1)"/>
+  <rect x="130" y="556" width="160" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <text x="210" y="580" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="600" fill="var(--ink)">CoreWeave</text>
+  <text x="210" y="597" text-anchor="middle" font-size="9" fill="var(--muted)">K8s-native</text>
+  <rect x="300" y="556" width="160" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <text x="380" y="580" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="600" fill="var(--ink)">RunPod</text>
+  <text x="380" y="597" text-anchor="middle" font-size="9" fill="var(--muted)">burst pods</text>
+  <rect x="470" y="556" width="160" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <text x="550" y="580" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Lambda Cloud</text>
+  <text x="550" y="597" text-anchor="middle" font-size="9" fill="var(--muted)">reserved</text>
+</svg>
+    <figcaption><b>System architecture.</b> Control plane and state stay on AWS; the provider router places GPU work on EKS by default or bursts to an external provider. GitOps drives every change from the repo.</figcaption>
+  </figure>
+</div></section>
+
+<!-- ===== table of contents ===== -->
+<section id="toc"><div class="wrap">
+  <div class="sec-label"><span class="tag">＃</span> Contents</div>
+  <h2>What's in this document</h2>
+  <p class="sec-intro">The first five sections explain evaluations and the workflows the platform serves, from first principles. The rest specify the platform itself — capabilities, cost, the console, GPU portability, and delivery. Jump anywhere.</p>
+  <div class="toc-grid">
+    <a href="#eval-basics"><span class="n">01</span><span class="t">Evals 101</span><span class="d">What an evaluation is and the Inspect building blocks.</span></a>
+    <a href="#simple-workflow"><span class="n">02</span><span class="t">Simple workflow</span><span class="d">How a model-graded eval runs, end to end.</span></a>
+    <a href="#simple-infra"><span class="n">03</span><span class="t">Simple infrastructure</span><span class="d">The minimal footprint: a container, an API, a bucket.</span></a>
+    <a href="#complex-workflow"><span class="n">04</span><span class="t">Complex workflow</span><span class="d">Agentic, sandboxed, GPU-backed evaluations.</span></a>
+    <a href="#dependencies"><span class="n">05</span><span class="t">Dependencies &amp; sources</span><span class="d">Every third-party piece and where it comes from.</span></a>
+    <a href="#capabilities"><span class="n">06</span><span class="t">Capability layers</span><span class="d">Logging, observability, network inspectability.</span></a>
+    <a href="#scope"><span class="n">07</span><span class="t">Two altitudes</span><span class="d">Account level down to a single sample.</span></a>
+    <a href="#cost"><span class="n">08</span><span class="t">Cost reality</span><span class="d">What actually bills, and the always-on tax.</span></a>
+    <a href="#tiers"><span class="n">09</span><span class="t">FinOps tiers</span><span class="d">Cheap-by-default, opt-in richer tiers.</span></a>
+    <a href="#dashboard"><span class="n">10</span><span class="t">The console</span><span class="d">Passive inspection and active, audited control.</span></a>
+    <a href="#finops"><span class="n">11</span><span class="t">FinOps in practice</span><span class="d">Every run knows what it cost.</span></a>
+    <a href="#gpu"><span class="n">12</span><span class="t">GPU portability</span><span class="d">Compute that isn't locked to one cloud.</span></a>
+    <a href="#iac"><span class="n">13</span><span class="t">Provisioning</span><span class="d">Everything in Terraform modules.</span></a>
+    <a href="#git"><span class="n">14</span><span class="t">CI/CD &amp; GitOps</span><span class="d">The repository is the control surface.</span></a>
+    <a href="#plan"><span class="n">15</span><span class="t">Build plan</span><span class="d">Phased, demoable at each step.</span></a>
+  </div>
+</div></section>
+
+<!-- ===== eval basics ===== -->
+<section id="eval-basics"><div class="wrap">
+  <div class="sec-label"><span class="tag">01</span> Evals 101</div>
+  <h2>What an evaluation actually is</h2>
+  <p class="sec-intro">An <b>evaluation</b> measures a model's capability or safety on a specific task by running it against a <b>dataset</b> of examples and <b>scoring</b> the outputs. Instead of eyeballing a few prompts, you define the task once and run it reproducibly over hundreds or thousands of samples. <a href="https://inspect.aisi.org.uk">Inspect</a>, the open-source framework from the UK AI Safety Institute (AISI), is the tool this platform runs. It gives evals a common shape, so any eval — yours or one from the community — plugs into the same machinery.</p>
+
+  <h3>The four building blocks of an Inspect task</h3>
+  <div class="grid-2">
+    <div class="cap"><span class="ico">// DATASET</span><h3>Dataset &amp; samples</h3>
+      <p>The questions. Each <b>sample</b> is an <code>input</code> (the prompt) and usually a <code>target</code> (the correct answer or grading rubric).</p>
+      <ul>
+        <li>Loaded from JSON/CSV files or straight from the Hugging Face Hub</li>
+        <li>Can carry metadata, expected tool use, and per-sample files</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// SOLVER</span><h3>Solver</h3>
+      <p>How the model is driven. The simplest solver just calls <code>generate()</code>; richer ones add prompt templates, multi-step reasoning, or a full agent loop with tools.</p>
+      <ul>
+        <li>Solvers compose — chain a system prompt, a tool-use loop, and a final answer step</li>
+        <li>This is where a "simple" eval becomes a "complex" agentic one</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// SCORER</span><h3>Scorer</h3>
+      <p>How an output becomes a number. Scorers range from exact-match and pattern checks to <b>model-graded</b> rubrics where another model judges the answer.</p>
+      <ul>
+        <li>Produces a score plus an explanation, per sample</li>
+        <li>Aggregated into metrics (accuracy, pass@k, …) across the dataset</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// LOG</span><h3>The <code>.eval</code> transcript</h3>
+      <p>The authoritative record. Every prompt, completion, tool call, and score for every sample is captured in a single replayable <code>.eval</code> log.</p>
+      <ul>
+        <li>Viewable in the Inspect log viewer; archived to S3 by this platform</li>
+        <li>Pinned to model version, git SHA, and seed for exact reproduction</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Two classes of eval — and why the difference drives the whole platform</h3>
+  <div class="grid-2">
+    <div class="cap" style="border-left:3px solid var(--signal);"><span class="ico" style="color:var(--signal)">// LIGHTWEIGHT</span><h3>Model-graded evals</h3>
+      <p>The model answers a prompt; a scorer (often another model) grades it. <b>No code execution, no sandbox.</b> All the work is API calls and text. These are cheap, fast, and need almost no infrastructure — see the simple workflow next.</p>
+    </div>
+    <div class="cap" style="border-left:3px solid var(--rose);"><span class="ico" style="color:var(--rose)">// HEAVYWEIGHT</span><h3>Agentic, sandboxed evals</h3>
+      <p>The model acts as an <b>agent</b> — running shell commands, editing files, browsing — inside an isolated sandbox. This needs container isolation, controlled network egress, audit, and often GPU compute. That's the complex workflow, and the reason the platform exists.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ===== simple workflow ===== -->
+<section id="simple-workflow"><div class="wrap">
+  <div class="sec-label"><span class="tag">02</span> Simple workflow</div>
+  <h2>How a simple eval runs, end to end</h2>
+  <p class="sec-intro">A model-graded eval is a straight line: load the dataset, prompt the model for each sample, score each completion, and write one <code>.eval</code> log. Nothing is sandboxed and nothing runs on a GPU — the model is reached over an API.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 200" width="100%" role="img" aria-label="Simple eval workflow diagram" font-family="'JetBrains Mono',monospace">
+      <defs><marker id="ahS" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7.5,3 L0,6 Z" fill="var(--signal)"/></marker></defs>
+      <rect x="8" y="64" width="128" height="68" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="8" y="64" width="4" height="68" rx="2" fill="var(--iris)"/>
+      <text x="72" y="94" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Dataset</text>
+      <text x="72" y="112" text-anchor="middle" font-size="9" fill="var(--muted)">input + target</text>
+      <rect x="160" y="64" width="128" height="68" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="160" y="64" width="4" height="68" rx="2" fill="var(--signal)"/>
+      <text x="224" y="94" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Solver</text>
+      <text x="224" y="112" text-anchor="middle" font-size="9" fill="var(--muted)">generate()</text>
+      <rect x="312" y="64" width="128" height="68" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="312" y="64" width="4" height="68" rx="2" fill="var(--amber)"/>
+      <text x="376" y="94" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Model</text>
+      <text x="376" y="112" text-anchor="middle" font-size="9" fill="var(--muted)">API call</text>
+      <rect x="464" y="64" width="128" height="68" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="464" y="64" width="4" height="68" rx="2" fill="var(--signal)"/>
+      <text x="528" y="94" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Scorer</text>
+      <text x="528" y="112" text-anchor="middle" font-size="9" fill="var(--muted)">grade output</text>
+      <rect x="616" y="64" width="136" height="68" rx="10" fill="var(--inset)" stroke="var(--signal)" stroke-width="1.5"/>
+      <text x="684" y="94" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">.eval log</text>
+      <text x="684" y="112" text-anchor="middle" font-size="9" fill="var(--signal)">transcript + score</text>
+      <line x1="136" y1="98" x2="156" y2="98" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahS)"/>
+      <line x1="288" y1="98" x2="308" y2="98" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahS)"/>
+      <text x="376" y="50" text-anchor="middle" font-size="9" fill="var(--muted)">prompt</text>
+      <line x1="440" y1="98" x2="460" y2="98" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahS)"/>
+      <text x="452" y="50" text-anchor="middle" font-size="9" fill="var(--muted)">completion</text>
+      <line x1="592" y1="98" x2="612" y2="98" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahS)"/>
+      <text x="148" y="158" text-anchor="start" font-size="9.5" fill="var(--muted)">repeated for every sample in the dataset → metrics aggregated across all samples</text>
+    </svg>
+    <figcaption><b>Simple (model-graded) flow.</b> Pure text in, pure text out, scored and logged. The only external dependency at run time is the model API.</figcaption>
+  </figure>
+
+  <p>Defining and running it is just as direct — a task is a few lines, and one command runs it:</p>
+  <pre><span class="c"># task.py — a complete model-graded eval</span>
+<span class="k">from</span> inspect_ai <span class="k">import</span> Task, task
+<span class="k">from</span> inspect_ai.dataset <span class="k">import</span> json_dataset
+<span class="k">from</span> inspect_ai.solver <span class="k">import</span> generate
+<span class="k">from</span> inspect_ai.scorer <span class="k">import</span> model_graded_fact
+
+<span class="a">@task</span>
+<span class="k">def</span> capital_cities():
+    <span class="k">return</span> Task(
+        dataset=json_dataset(<span class="s">"questions.jsonl"</span>),
+        solver=generate(),                 <span class="c"># just ask the model</span>
+        scorer=model_graded_fact(),        <span class="c"># a model grades the answer</span>
+    )
+
+<span class="c"># run it from a laptop or a CI job:</span>
+<span class="s">inspect eval task.py --model openai/gpt-4o</span></pre>
+</div></section>
+
+<!-- ===== simple infra ===== -->
+<section id="simple-infra"><div class="wrap">
+  <div class="sec-label"><span class="tag">03</span> Simple infrastructure</div>
+  <h2>The infrastructure a simple workflow needs</h2>
+  <p class="sec-intro">Because nothing executes untrusted code, the footprint is tiny. You need somewhere to run the container, a secret for the model API key, and a bucket for the logs. <b>No Kubernetes, no GPU, no NAT gateway.</b> This is the platform's cheapest mode — and it runs for a few dollars a month.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 300" width="100%" role="img" aria-label="Simple eval infrastructure diagram" font-family="'JetBrains Mono',monospace">
+      <defs><marker id="ahI" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7.5,3 L0,6 Z" fill="var(--signal)"/></marker></defs>
+      <rect x="260" y="18" width="240" height="54" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="260" y="18" width="4" height="54" rx="2" fill="var(--amber)"/>
+      <text x="380" y="42" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Secrets Manager</text>
+      <text x="380" y="59" text-anchor="middle" font-size="9" fill="var(--muted)">model API key</text>
+      <line x1="380" y1="72" x2="380" y2="106" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahI)"/>
+      <text x="390" y="93" text-anchor="start" font-size="9" fill="var(--muted)">injected at runtime</text>
+      <rect x="240" y="110" width="280" height="74" rx="11" fill="var(--panel)" stroke="var(--signal)" stroke-width="1.6"/>
+      <rect x="240" y="110" width="4" height="74" rx="2" fill="var(--signal)"/>
+      <text x="380" y="140" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">inspect eval · Fargate task</text>
+      <text x="380" y="160" text-anchor="middle" font-size="9.5" fill="var(--muted)">container · scale-to-zero · no GPU</text>
+      <rect x="560" y="120" width="184" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="560" y="120" width="4" height="56" rx="2" fill="var(--iris)"/>
+      <text x="652" y="144" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="600" fill="var(--ink)">Model API</text>
+      <text x="652" y="161" text-anchor="middle" font-size="9" fill="var(--muted)">OpenAI / Anthropic / …</text>
+      <line x1="520" y1="140" x2="556" y2="140" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahI)"/>
+      <line x1="556" y1="156" x2="524" y2="156" stroke="var(--line)" stroke-width="1.3" marker-end="url(#ahI)"/>
+      <text x="540" y="116" text-anchor="middle" font-size="8.5" fill="var(--muted)">HTTPS</text>
+      <rect x="240" y="220" width="280" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="240" y="220" width="4" height="60" rx="2" fill="var(--iris)"/>
+      <text x="380" y="246" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">S3</text>
+      <text x="380" y="263" text-anchor="middle" font-size="9" fill="var(--muted)">.eval logs + results</text>
+      <line x1="380" y1="184" x2="380" y2="216" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahI)"/>
+      <text x="390" y="205" text-anchor="start" font-size="9" fill="var(--muted)">archive</text>
+      <text x="40" y="250" text-anchor="start" font-size="9.5" fill="var(--muted)">No EKS.</text>
+      <text x="40" y="266" text-anchor="start" font-size="9.5" fill="var(--muted)">No NAT — VPC</text>
+      <text x="40" y="280" text-anchor="start" font-size="9.5" fill="var(--muted)">endpoints to S3.</text>
+    </svg>
+    <figcaption><b>Minimal footprint.</b> A Fargate task pulls the API key from Secrets Manager, calls the model over HTTPS, and writes the <code>.eval</code> log to S3. Everything scales to zero when idle.</figcaption>
+  </figure>
+</div></section>
+
+<!-- ===== complex workflow ===== -->
+<section id="complex-workflow"><div class="wrap">
+  <div class="sec-label"><span class="tag">04</span> Complex workflow</div>
+  <h2>The infrastructure a complex workflow needs</h2>
+  <p class="sec-intro">Agentic evals let the model <em>act</em>: run shell commands, execute code, edit files, sometimes browse the web. That power is exactly why it must be contained. The model runs inside an isolated <b>sandbox pod</b> on Kubernetes, its network egress is allow-listed and recorded, and the model itself may be served from a GPU. Every one of these requirements maps to a piece of infrastructure the simple workflow didn't need.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 452" width="100%" role="img" aria-label="Complex agentic eval workflow diagram" font-family="'JetBrains Mono',monospace">
+      <defs><marker id="ahC" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7.5,3 L0,6 Z" fill="var(--signal)"/></marker></defs>
+      <!-- spine -->
+      <rect x="50" y="20" width="300" height="52" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="50" y="20" width="4" height="52" rx="2" fill="var(--signal)"/>
+      <text x="200" y="42" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Control plane / scheduler</text>
+      <text x="200" y="59" text-anchor="middle" font-size="9" fill="var(--muted)">routes a sandboxed run</text>
+      <line x1="200" y1="72" x2="200" y2="100" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahC)"/>
+      <text x="210" y="90" text-anchor="start" font-size="9" fill="var(--muted)">schedule</text>
+      <rect x="50" y="104" width="300" height="128" rx="11" fill="var(--panel)" stroke="var(--rose)" stroke-width="1.6"/>
+      <rect x="50" y="104" width="4" height="128" rx="2" fill="var(--rose)"/>
+      <text x="200" y="130" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">K8s sandbox pod</text>
+      <text x="200" y="152" text-anchor="middle" font-size="9.5" fill="var(--muted)">Inspect solver drives the agent</text>
+      <text x="200" y="170" text-anchor="middle" font-size="9.5" fill="var(--muted)">tool calls: bash · python · editor</text>
+      <text x="200" y="188" text-anchor="middle" font-size="9.5" fill="var(--muted)">isolated filesystem + processes</text>
+      <text x="200" y="212" text-anchor="middle" font-size="9" fill="var(--rose)">untrusted code runs here — contained</text>
+      <line x1="200" y1="232" x2="200" y2="260" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahC)"/>
+      <text x="210" y="250" text-anchor="start" font-size="9" fill="var(--muted)">model / tool calls</text>
+      <rect x="50" y="264" width="300" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="50" y="264" width="4" height="60" rx="2" fill="var(--signal)"/>
+      <text x="200" y="290" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Model backend</text>
+      <text x="200" y="307" text-anchor="middle" font-size="9" fill="var(--muted)">vLLM on GPU (spot) · or hosted API</text>
+      <line x1="200" y1="324" x2="200" y2="352" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ahC)"/>
+      <text x="210" y="342" text-anchor="start" font-size="9" fill="var(--muted)">result</text>
+      <rect x="50" y="356" width="300" height="58" rx="10" fill="var(--inset)" stroke="var(--signal)" stroke-width="1.5"/>
+      <text x="200" y="380" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Scorer → .eval transcript</text>
+      <text x="200" y="398" text-anchor="middle" font-size="9" fill="var(--signal)">archived to S3</text>
+      <!-- right annotations -->
+      <rect x="500" y="110" width="244" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="500" y="110" width="4" height="60" rx="2" fill="var(--amber)"/>
+      <text x="622" y="134" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="11.5" font-weight="600" fill="var(--ink)">Egress allow-list</text>
+      <text x="622" y="151" text-anchor="middle" font-size="9" fill="var(--muted)">NetworkPolicy · BLOCK if unknown</text>
+      <line x1="350" y1="150" x2="496" y2="140" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ahC)"/>
+      <text x="430" y="128" text-anchor="middle" font-size="8.5" fill="var(--muted)">every outbound call</text>
+      <rect x="500" y="190" width="244" height="56" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="500" y="190" width="4" height="56" rx="2" fill="var(--iris)"/>
+      <text x="622" y="213" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="11.5" font-weight="600" fill="var(--ink)">Hubble + VPC Flow Logs</text>
+      <text x="622" y="230" text-anchor="middle" font-size="9" fill="var(--muted)">flows captured, partitioned by run</text>
+      <line x1="622" y1="170" x2="622" y2="186" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ahC)"/>
+      <text x="632" y="183" text-anchor="start" font-size="8.5" fill="var(--muted)">audit</text>
+      <rect x="500" y="270" width="244" height="54" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+      <rect x="500" y="270" width="4" height="54" rx="2" fill="var(--cost,var(--amber))"/>
+      <text x="622" y="292" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="11.5" font-weight="600" fill="var(--ink)">DCGM GPU telemetry</text>
+      <text x="622" y="309" text-anchor="middle" font-size="9" fill="var(--muted)">util · mem · power (only when up)</text>
+      <line x1="350" y1="294" x2="496" y2="296" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ahC)"/>
+    </svg>
+    <figcaption><b>Complex (agentic) flow.</b> The agent runs untrusted code inside a Kubernetes sandbox; its egress is allow-listed and every flow recorded; the model can be served on GPU; and the full transcript is archived. Each guardrail is a Terraform module.</figcaption>
+  </figure>
+
+  <div class="callout panel"><p style="margin:0; color:var(--muted);"><b style="color:var(--ink);">Why this is the hard part —</b> the jump from simple to complex is the jump from "trusted text" to "untrusted execution." Isolation, controlled egress, audit, and GPU serving are not optional extras; they are the price of letting a model act. The platform's job is to make that price a set of reusable modules instead of a bespoke build every time.</p></div>
+</div></section>
+
+<!-- ===== dependencies ===== -->
+<section id="dependencies"><div class="wrap">
+  <div class="sec-label"><span class="tag">05</span> Dependencies &amp; sources</div>
+  <h2>Third-party dependencies and where they come from</h2>
+  <p class="sec-intro">An eval platform is mostly an integration of open components. Naming each dependency and its source keeps the supply chain auditable — and makes it clear what an adopter is trusting. Everything below is open-source or a standard cloud service; nothing is bespoke or hidden.</p>
+  <table class="ledger">
+    <tr><th>Dependency</th><th>What it provides</th><th>Source</th></tr>
+    <tr><td><b>inspect_ai</b></td><td>The eval framework — Task, Solver, Scorer, sandbox API, log viewer</td><td>UK AISI · PyPI / GitHub (<code>UKGovernmentBEIS/inspect_ai</code>)</td></tr>
+    <tr><td><b>inspect_evals</b></td><td>A community collection of ready-made evals (SWE-bench, GAIA, GPQA, CTFs, …)</td><td>UK AISI · GitHub (<code>UKGovernmentBEIS/inspect_evals</code>)</td></tr>
+    <tr><td><b>Datasets</b></td><td>The samples each eval runs on — questions, tasks, rubrics, fixtures</td><td>Hugging Face Hub · eval-specific repos · bundled files</td></tr>
+    <tr><td><b>Model providers</b></td><td>The models under test and the graders</td><td>OpenAI · Anthropic · Google APIs — or self-hosted weights from Hugging Face</td></tr>
+    <tr><td><b>Self-hosted serving</b></td><td>Running open-weight models on your own GPUs</td><td>vLLM (open-source) · model weights from Hugging Face</td></tr>
+    <tr><td><b>Sandbox runtime</b></td><td>Isolated execution for agentic evals</td><td>Docker images · AISI <code>k8s-sandbox</code> (k8s-sandbox.aisi.org.uk)</td></tr>
+    <tr><td><b>GPU compute</b></td><td>The hardware for serving and GPU evals</td><td>AWS · CoreWeave · RunPod · Lambda Cloud</td></tr>
+    <tr><td><b>Observability</b></td><td>Metrics, dashboards, traces, GPU telemetry</td><td>Prometheus · Grafana · OpenTelemetry · NVIDIA DCGM</td></tr>
+    <tr><td><b>Infrastructure-as-code</b></td><td>Declaring and delivering every resource</td><td>Terraform + AWS / Kubernetes / GitHub providers</td></tr>
+  </table>
+  <div class="callout panel" style="margin-top:16px;"><p style="margin:0; color:var(--muted);"><b style="color:var(--ink);">Supply-chain hygiene —</b> dependency versions are pinned, container images are scanned in CI, and model API keys live only in Secrets Manager. An adopter can read this table and know exactly what they are pulling in and from where.</p></div>
+</div></section>
+
+<!-- ===== capabilities ===== -->
+<section id="capabilities"><div class="wrap">
+  <div class="sec-label"><span class="tag">06</span> Capability layers</div>
+  <h2>Logging, observability, and network inspectability</h2>
+  <p class="sec-intro">Each capability is provisioned as a Terraform module and exposed in the dashboard. The principle throughout: every layer answers a question at <b>two altitudes</b> — across the whole AWS account, and for one specific eval run.</p>
+
+  <div class="grid-2">
+    <div class="cap"><span class="ico">// LOGGING</span><h3>Structured, centralized logging</h3>
+      <p>Every component emits structured JSON to a single sink, queryable by run, model, task, and sandbox type.</p>
+      <ul>
+        <li>Control-plane, executor, and sandbox-pod logs to CloudWatch Logs, exported to S3 for cheap long-term retention</li>
+        <li>Each line tagged with <code>run_id</code>, <code>task</code>, <code>model</code>, <code>git_sha</code></li>
+        <li>The <code>.eval</code> transcript itself is the authoritative per-sample record, archived to S3 with lifecycle rules</li>
+        <li>OpenSearch (optional) for full-text search across runs</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// OBSERVABILITY</span><h3>Metrics &amp; traces</h3>
+      <p>Operational health and eval health on the same panes.</p>
+      <ul>
+        <li>Prometheus + Grafana for queue depth, throughput, error rate, per-run latency</li>
+        <li>DCGM exporter for GPU utilization, memory, power — only when GPU nodes are up</li>
+        <li>OpenTelemetry traces spanning submit → schedule → execute → score → archive</li>
+        <li>CloudWatch alarms on stuck queues, runaway runs, and budget thresholds</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// NETWORK</span><h3>Network inspectability</h3>
+      <p>For agentic evals, what the agent's sandbox touched is a first-class, auditable record.</p>
+      <ul>
+        <li>VPC Flow Logs on all subnets, to S3, partitioned by run</li>
+        <li>Kubernetes NetworkPolicy (Calico/Cilium) enforcing per-sandbox egress allow-lists</li>
+        <li>Cilium Hubble flow visibility for pod-level connection records during a run</li>
+        <li>Egress through a logged NAT / proxy so every outbound call from a sandbox is attributable</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// IDENTITY</span><h3>Audit &amp; access</h3>
+      <p>Who and what acted, end to end.</p>
+      <ul>
+        <li>CloudTrail across the account, to a write-once S3 bucket</li>
+        <li>IRSA so each workload assumes a least-privilege role, no shared keys</li>
+        <li>Model API keys in Secrets Manager, never in images or state</li>
+        <li>Every dashboard active-action recorded as an attributable audit event</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- ===== scope ladder ===== -->
+<section id="scope"><div class="wrap">
+  <div class="sec-label"><span class="tag">07</span> Two altitudes</div>
+  <h2>Account level and granular level</h2>
+  <p class="sec-intro">The same capabilities are observable at the scope you need. The dashboard lets you start account-wide and drill to a single sample without changing tools.</p>
+  <div class="ladder">
+    <div class="lvl">ACCOUNT</div>
+    <div class="desc"><b>Whole-estate view.</b> CloudTrail, Config rules, GuardDuty findings, account-wide budget and Cost Explorer data, aggregate VPC Flow Logs, total runs and spend across every environment.</div>
+    <div class="lvl">ENV</div>
+    <div class="desc"><b>dev / prod workspace.</b> Per-environment Terraform state, budgets, cluster health, executor queue depth, and spend, isolated by tag and account boundary.</div>
+    <div class="lvl">RUN</div>
+    <div class="desc"><b>A single eval run.</b> Its logs, OTel trace, cost, model + git_sha + seed, and the exact sandbox network flows it generated — all keyed by <code>run_id</code>.</div>
+    <div class="lvl">SAMPLE</div>
+    <div class="desc"><b>One sample inside a run.</b> The Inspect transcript, tool calls, sandbox exec records, and the egress connections that specific sample opened.</div>
+  </div>
+</div></section>
+
+<!-- ===== cost reality ===== -->
+<section id="cost"><div class="wrap">
+  <div class="sec-label"><span class="tag">08</span> Cost reality</div>
+  <h2>A hard look at what actually bills</h2>
+  <p class="sec-intro">Scale-to-zero handles the GPUs. The danger is the <b>always-on tax</b> — the components that bill 24/7 even on a month with zero evals. This is where eval platforms quietly leak money, so it gets named and engineered, not hidden. Figures are us-east-1 list prices, mid-2026, for a single environment; treat them as order-of-magnitude.</p>
+
+  <h3>The always-on baseline (zero evals running)</h3>
+  <table class="ledger">
+    <tr><th>Component</th><th>Why it never sleeps</th><th class="num">$/mo</th></tr>
+    <tr><td><b>EKS control plane</b></td><td>Billed per cluster-hour the moment the cluster exists</td><td class="num">$73</td></tr>
+    <tr><td><b>NAT gateway</b> (1 AZ)</td><td>Hourly charge with zero traffic; +$0.045/GB on top</td><td class="num">$33</td></tr>
+    <tr><td><b>RDS Postgres</b> (small)</td><td>Run metadata store; on unless you stop it</td><td class="num">~$25</td></tr>
+    <tr><td><b>Secrets Manager</b></td><td>Per-secret monthly charge</td><td class="num">~$5</td></tr>
+    <tr><td><b>S3 at rest</b></td><td>Logs + results accumulation</td><td class="num">~$5</td></tr>
+    <tr><td colspan="2"><b>Baseline before a single eval runs</b></td><td class="num"><b>~$141/mo</b></td></tr>
+  </table>
+
+  <div class="callout panel" style="margin-top:18px; border-left:3px solid var(--rose);">
+    <h3 style="margin-top:0; color:var(--rose);">⚠ The EKS extended-support trap</h3>
+    <p style="margin:0; color:var(--muted);">The control-plane fee jumps from <b style="color:var(--ink);">$0.10/hr ($73/mo)</b> to <b style="color:var(--ink);">$0.60/hr ($438/mo)</b> — a <b style="color:var(--rose);">6× increase</b> — once your Kubernetes version exits standard support, and Terraform-managed clusters drift into it silently because IaC defaults enable extended support. <b style="color:var(--ink);">Pin the version with an upgrade-deadline comment in code</b> so the intent survives review. That one comment prevents a ~$365/mo surprise.</p>
+  </div>
+
+  <h3>A lean active month (≈40 GPU-hours of evals)</h3>
+  <table class="ledger">
+    <tr><th>Line</th><th>Note</th><th class="num">$/mo</th></tr>
+    <tr><td>Always-on baseline</td><td>from above</td><td class="num">~$141</td></tr>
+    <tr><td>40h g5.xlarge <b>on spot</b></td><td class="save">~65% off on-demand</td><td class="num">~$14</td></tr>
+    <tr><td>Fargate executors</td><td>bursty, scale-to-zero</td><td class="num">~$15</td></tr>
+    <tr><td>Hosted model APIs</td><td>workload-dependent</td><td class="num">~$60</td></tr>
+    <tr><td colspan="2"><b>Lean month, all-in</b></td><td class="num"><b>~$230/mo</b></td></tr>
+  </table>
+
+  <h3>Three structural levers that change the baseline</h3>
+  <div class="grid-3" style="margin-top:6px;">
+    <div class="cap"><span class="ico">// LEVER 01</span><h3>Ephemeral cluster</h3><p>Create the EKS cluster per eval campaign and <code>terraform destroy</code> after. A cluster that lives 30h/mo costs <b style="color:var(--signal)">~$3</b> in control-plane fees vs $73 always-on. Best when runs are batched.</p></div>
+    <div class="cap"><span class="ico">// LEVER 02</span><h3>Kill the NAT tax</h3><p>Route S3/ECR/CloudWatch/Secrets through <b>VPC endpoints</b> (S3 gateway endpoint is free) instead of NAT. For agentic egress, a small NAT instance can replace the gateway in dev — 90%+ cheaper.</p></div>
+    <div class="cap"><span class="ico">// LEVER 03</span><h3>Fargate-only mode</h3><p>If a given period needs only model-graded evals, run with <b>no cluster at all</b> — the EKS module is opt-in. Baseline drops by the full $73 control-plane fee plus node overhead.</p></div>
+  </div>
+</div></section>
+
+<!-- ===== opt-in tiers ===== -->
+<section id="tiers"><div class="wrap">
+  <div class="sec-label"><span class="tag">09</span> FinOps · opt-in tiers</div>
+  <h2>Cheaper tiers for logging, monitoring &amp; observability</h2>
+  <p class="sec-intro">Observability is the most over-provisioned layer in any platform — "turn everything on" defaults are what generate surprise bills. So each capability ships as a <b>Terraform feature flag</b> with a deliberately cheap default. You opt <em>up</em> into richer tiers, you never opt out of an expensive one.</p>
+
+  <h3>Logging</h3>
+  <div class="ladder">
+    <div class="lvl" style="color:var(--signal)">TIER 0<br>default</div>
+    <div class="desc"><b>S3-direct + CloudWatch Infrequent Access.</b> Ship logs to the IA log class at <b>$0.25/GB</b> (half of Standard's $0.50) — it now supports full Logs Insights queries. Archive <code>.eval</code> transcripts straight to S3 with lifecycle-to-Glacier. <span style="color:var(--signal)">~$0 idle.</span></div>
+    <div class="lvl">TIER 1</div>
+    <div class="desc"><b>+ Standard CloudWatch</b> for the few log groups needing metric filters / real-time alarms. Opt in per-group, not account-wide.</div>
+    <div class="lvl">TIER 2</div>
+    <div class="desc"><b>+ OpenSearch</b> for full-text search across runs. Always-on and the priciest option — flagged off by default, justified only at high run volume.</div>
+  </div>
+
+  <h3 style="margin-top:26px;">Monitoring &amp; metrics</h3>
+  <div class="ladder">
+    <div class="lvl" style="color:var(--signal)">TIER 0<br>default</div>
+    <div class="desc"><b>CloudWatch metrics + a handful of alarms.</b> Standard alarms are <b>$0.10</b> each; basic AWS service metrics are free. Watch only what triggers action: stuck queue, runaway run, budget breach. No always-on backend. <span style="color:var(--signal)">A few dollars/mo.</span></div>
+    <div class="lvl">TIER 1</div>
+    <div class="desc"><b>+ Amazon Managed Prometheus + Managed Grafana.</b> Pay-per-ingest metrics; Grafana at <b>$9/editor/mo</b>. No node to babysit. The recommended middle tier.</div>
+    <div class="lvl">TIER 2</div>
+    <div class="desc"><b>Self-hosted Prometheus + Grafana</b> on a small node (~$30/mo always-on). Only worth it if you want zero managed-service spend and accept operating it. Watch metric <b>cardinality</b> — it grows faster than budgets.</div>
+  </div>
+
+  <h3 style="margin-top:26px;">Network inspectability</h3>
+  <div class="ladder">
+    <div class="lvl" style="color:var(--signal)">TIER 0<br>default</div>
+    <div class="desc"><b>VPC Flow Logs to S3</b> (cheaper than to CloudWatch) + Kubernetes NetworkPolicy enforcement. Captures the audit-grade record of what each sandbox touched at minimal cost. <span style="color:var(--signal)">Near-$0 idle.</span></div>
+    <div class="lvl">TIER 1</div>
+    <div class="desc"><b>+ Cilium Hubble</b> pod-level flow visibility, enabled only while a cluster is up — so it costs nothing in Fargate-only or torn-down periods.</div>
+    <div class="lvl">TIER 2</div>
+    <div class="desc"><b>+ live flow dashboards / deep retention.</b> For investigation-heavy work; off by default.</div>
+  </div>
+
+  <div class="callout panel" style="margin-top:22px;">
+    <p style="margin:0 0 8px; color:var(--ink); font-family:var(--disp); font-size:16px;">The governing rule, expressed in Terraform</p>
+    <pre style="margin:6px 0 0;"><span class="c"># Every capability is a gated, default-cheap feature flag.</span>
+<span class="a">variable</span> <span class="s">"observability_tier"</span> { <span class="a">default</span> = <span class="s">0</span> }   <span class="c"># 0 = CloudWatch only (cheap)</span>
+<span class="a">variable</span> <span class="s">"logging_tier"</span>       { <span class="a">default</span> = <span class="s">0</span> }   <span class="c"># 0 = S3 + CW Infrequent Access</span>
+<span class="a">variable</span> <span class="s">"network_tier"</span>       { <span class="a">default</span> = <span class="s">0</span> }   <span class="c"># 0 = Flow Logs + NetworkPolicy</span>
+<span class="a">variable</span> <span class="s">"enable_eks"</span>         { <span class="a">default</span> = <span class="k">false</span> }  <span class="c"># Fargate-only until you need sandboxes</span>
+<span class="a">variable</span> <span class="s">"enable_opensearch"</span>  { <span class="a">default</span> = <span class="k">false</span> }  <span class="c"># the expensive always-on extras stay off</span>
+<span class="a">variable</span> <span class="s">"ephemeral_cluster"</span>  { <span class="a">default</span> = <span class="k">true</span> }   <span class="c"># create per-campaign, destroy after</span></pre>
+    <p style="margin:10px 0 0; color:var(--muted); font-size:13px;">Defaults land you near the <b style="color:var(--ink)">$141 baseline</b> (or far below in Fargate-only mode). Richer tiers are a one-line change you make consciously — which is exactly the FinOps principle the project demonstrates: <b style="color:var(--ink)">"the expensive switches exist, they're labelled, and they're off until someone decides otherwise."</b></p>
+  </div>
+</div></section>
+
+<!-- ===== dashboard (signature interactive) ===== -->
+<section id="dashboard"><div class="wrap">
+  <div class="sec-label"><span class="tag">10</span> The console</div>
+  <h2>A dashboard for passive and active operation</h2>
+  <p class="sec-intro">Passive actions observe; active actions change system state. The dashboard keeps them visually distinct — observation is always available, mutation is always deliberate and audited. The mock below is interactive.</p>
+
+  <div class="legend">
+    <span><i style="background:var(--amber)"></i> Passive — inspect, no state change</span>
+    <span><i style="background:var(--rose)"></i> Active — mutates state, audited</span>
+  </div>
+
+  <div class="dash" style="margin-top:18px;">
+    <div class="dash-top">
+      <span class="dot" style="background:var(--rose)"></span>
+      <span class="dot" style="background:var(--amber)"></span>
+      <span class="dot" style="background:var(--signal)"></span>
+      <span style="color:var(--muted); margin-left:6px;">inspect-ctrl · aws:eval-prod · operator@platform</span>
+    </div>
+    <div class="dash-tabs">
+      <button class="dash-tab on" data-pane="overview">Overview</button>
+      <button class="dash-tab" data-pane="runs">Runs</button>
+      <button class="dash-tab" data-pane="network">Network</button>
+      <button class="dash-tab" data-pane="cost">Cost</button>
+    </div>
+    <div class="dash-body">
+
+      <!-- overview -->
+      <div class="dash-pane on" id="overview">
+        <div class="kpis">
+          <div class="kpi"><div class="k">Active runs</div><div class="v">7</div></div>
+          <div class="kpi"><div class="k">Queue depth</div><div class="v up">12</div></div>
+          <div class="kpi"><div class="k">GPU util</div><div class="v warn">71%</div></div>
+          <div class="kpi"><div class="k">Spend today</div><div class="v">$48.10</div></div>
+        </div>
+        <div class="k" style="font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px; letter-spacing:.08em;">RUNS / HR — LAST 8H</div>
+        <div class="bars">
+          <div class="bar" style="height:38%"><span>14</span></div>
+          <div class="bar" style="height:55%"><span>21</span></div>
+          <div class="bar" style="height:30%"><span>11</span></div>
+          <div class="bar" style="height:72%"><span>28</span></div>
+          <div class="bar" style="height:88%"><span>34</span></div>
+          <div class="bar" style="height:60%"><span>23</span></div>
+          <div class="bar" style="height:45%"><span>17</span></div>
+          <div class="bar" style="height:50%"><span>19</span></div>
+        </div>
+      </div>
+
+      <!-- runs -->
+      <div class="dash-pane" id="runs">
+        <div class="runrow">
+          <span class="pill run">RUNNING</span>
+          <span><b style="color:var(--ink)">cybench/ctf-07</b> · gpt-class · k8s sandbox</span>
+          <span style="color:var(--muted)">run_4f9a</span>
+          <span style="color:var(--muted)">$3.20</span>
+          <span class="act"><button class="btn">Inspect</button><button class="btn active">Pause</button><button class="btn active">Kill</button></span>
+        </div>
+        <div class="runrow">
+          <span class="pill run">RUNNING</span>
+          <span><b style="color:var(--ink)">swebench/verified-12</b> · claude-class · k8s sandbox</span>
+          <span style="color:var(--muted)">run_2c71</span>
+          <span style="color:var(--muted)">$5.84</span>
+          <span class="act"><button class="btn">Inspect</button><button class="btn active">Pause</button><button class="btn active">Kill</button></span>
+        </div>
+        <div class="runrow">
+          <span class="pill warn">RETRY</span>
+          <span><b style="color:var(--ink)">harmbench/standard</b> · api model · no sandbox</span>
+          <span style="color:var(--muted)">run_9d03</span>
+          <span style="color:var(--muted)">$0.41</span>
+          <span class="act"><button class="btn">Inspect</button><button class="btn active">Requeue</button></span>
+        </div>
+        <div class="runrow">
+          <span class="pill ok">DONE</span>
+          <span><b style="color:var(--ink)">gsm8k/main</b> · api model · no sandbox</span>
+          <span style="color:var(--muted)">run_1a55</span>
+          <span style="color:var(--muted)">$0.18</span>
+          <span class="act"><button class="btn">View log</button><button class="btn">Replay</button></span>
+        </div>
+        <div class="actions-note">
+          <b class="passive">Passive</b> — Inspect, View log, Replay open read-only views of logs, traces, and flows.&nbsp;&nbsp;
+          <b class="active">Active</b> — Pause, Kill, Requeue mutate a live run; each emits an audit event with the operator identity.
+        </div>
+      </div>
+
+      <!-- network -->
+      <div class="dash-pane" id="network">
+        <p style="color:var(--muted); font-size:14px; margin-bottom:16px;">Egress recorded for <b style="color:var(--ink)">run_4f9a · sample 31</b> — sandbox allow-list enforced by NetworkPolicy, flows captured by Hubble + VPC Flow Logs.</p>
+        <div class="runrow"><span class="pill ok">ALLOW</span><span>github.com:443</span><span style="color:var(--muted)">in allow-list</span><span style="color:var(--muted)">4 conns</span><span style="color:var(--signal); font-family:var(--mono); font-size:11px;">expected</span></div>
+        <div class="runrow"><span class="pill ok">ALLOW</span><span>pypi.org:443</span><span style="color:var(--muted)">in allow-list</span><span style="color:var(--muted)">2 conns</span><span style="color:var(--signal); font-family:var(--mono); font-size:11px;">expected</span></div>
+        <div class="runrow"><span class="pill warn">BLOCK</span><span>198.51.100.7:4444</span><span style="color:var(--muted)">not in allow-list</span><span style="color:var(--muted)">1 attempt</span><span style="color:var(--amber); font-family:var(--mono); font-size:11px;">flagged</span></div>
+        <div class="actions-note"><b class="passive">Passive</b> view by default. An operator may <b class="active">add an allow-list rule</b> or <b class="active">quarantine the run</b> — both are active, audited actions.</div>
+      </div>
+
+      <!-- cost -->
+      <div class="dash-pane" id="cost">
+        <div class="kpis">
+          <div class="kpi"><div class="k">Month to date</div><div class="v">$230</div></div>
+          <div class="kpi"><div class="k">Idle baseline</div><div class="v warn">$141</div></div>
+          <div class="kpi"><div class="k">Spot savings</div><div class="v up">~65%</div></div>
+          <div class="kpi"><div class="k">Idle GPU waste</div><div class="v up">$0</div></div>
+        </div>
+        <table class="ledger">
+          <tr><th>Cost driver</th><th>Tag / tier</th><th class="num">MTD</th><th class="num">note</th></tr>
+          <tr><td><b>EKS control plane</b></td><td>enable_eks:true</td><td class="num">$73</td><td class="num save">$3 if ephemeral</td></tr>
+          <tr><td><b>NAT gateway</b></td><td>network_tier:0</td><td class="num">$33</td><td class="num save">VPC endpoints cut data</td></tr>
+          <tr><td><b>GPU eval nodes</b> (spot)</td><td>backend:eks</td><td class="num">$14</td><td class="num save">−65%</td></tr>
+          <tr><td><b>Hosted model APIs</b></td><td>models</td><td class="num">$60</td><td class="num">—</td></tr>
+          <tr><td><b>Logs + metrics</b></td><td>tier 0 default</td><td class="num">~$5</td><td class="num save">opensearch off</td></tr>
+        </table>
+        <div class="actions-note"><b class="passive">Passive</b> — spend attributed per run via cost-allocation tags.&nbsp;&nbsp;<b class="active">Active</b> — set a budget cap or trigger teardown directly from this pane.</div>
+      </div>
+
+    </div>
+  </div>
+</div></section>
+
+<!-- ===== finops in practice ===== -->
+<section id="finops"><div class="wrap">
+  <div class="sec-label"><span class="tag">11</span> FinOps in practice</div>
+  <h2>Every run knows what it cost</h2>
+  <p class="sec-intro">The tiers above control the <em>always-on</em> spend. This layer makes <em>variable</em> spend attributable — each run carries its own cost, so spend is observable at the same altitudes as logs and traces.</p>
+  <div class="grid-2">
+    <ul class="clean">
+      <li><b>Cost-allocation tags</b> on every resource — <code>run_id</code>, <code>backend</code>, <code>env</code>, <code>owner</code> — so Cost Explorer slices spend by run and team.</li>
+      <li><b>Per-run cost</b> computed from compute-seconds + token usage, stored beside the run metadata, visible the moment a run finishes.</li>
+      <li><b>Budgets &amp; alarms</b> at account and environment level, wired to dashboard alerts and optional auto-teardown.</li>
+      <li><b>Documented teardown</b> — <code>terraform destroy</code> returns idle cost to ~$0, stated as an explicit platform feature.</li>
+    </ul>
+    <div class="panel">
+      <h3 style="margin-top:0;">Headline FinOps claim</h3>
+      <p style="color:var(--muted); font-size:15px;">The number to put in the README and the project's docs:</p>
+      <p style="font-family:var(--disp); font-size:20px; color:var(--ink); line-height:1.3;">"Idle baseline <span style="color:var(--signal)">~$141/mo</span> — or near <span style="color:var(--signal)">$0</span> in Fargate-only / ephemeral mode. A lean active month runs <span style="color:var(--signal)">~$230</span>, attributed per run, with the expensive observability switches off by default."</p>
+      <p style="color:var(--muted); font-size:13px; margin-top:14px;">Quantified, tiered cost-awareness is what makes a platform safe for anyone to adopt. Measure it, tier it, then state it plainly.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ===== multi-cloud GPU ===== -->
+<section id="gpu"><div class="wrap">
+  <div class="sec-label"><span class="tag">12</span> GPU portability</div>
+  <h2>Compute that isn't locked to one cloud</h2>
+  <p class="sec-intro">GPUs are scarce, priced unevenly across providers, and capacity comes and goes. The control plane, state, and observability stay on AWS — but GPU eval work is portable across <b>AWS, RunPod, Lambda Cloud, and CoreWeave</b>. A provider router picks where each job lands; the eval is identical wherever it runs because the Inspect sandbox contract is the same. (Azure is intentionally out of scope.)</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 364" width="100%" role="img" aria-label="Provider router diagram" font-family="'JetBrains Mono',monospace">
+  <defs><marker id="ah2" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7.5,3 L0,6 Z" fill="var(--signal)"/></marker></defs>
+  <rect x="220" y="20" width="320" height="66" rx="11" fill="var(--panel)" stroke="var(--signal)" stroke-width="1.6"/>
+  <rect x="220" y="20" width="4" height="66" rx="2" fill="var(--signal)"/>
+  <text x="380" y="46" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="14" font-weight="600" fill="var(--ink)">PROVIDER ROUTER · control plane</text>
+  <text x="380" y="66" text-anchor="middle" font-size="9" fill="var(--muted)">gpu_type · price ceiling · capacity · sandbox class · region</text>
+  <line x1="360" y1="86" x2="110" y2="156" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah2)"/>
+  <line x1="372" y1="86" x2="290" y2="156" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah2)"/>
+  <line x1="388" y1="86" x2="470" y2="156" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah2)"/>
+  <line x1="400" y1="86" x2="650" y2="156" stroke="var(--signal)" stroke-width="1.4" marker-end="url(#ah2)"/>
+  <rect x="20" y="160" width="165" height="66" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="20" y="160" width="4" height="66" rx="2" fill="var(--signal)"/>
+  <text x="102" y="188" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">AWS EKS · spot</text>
+  <text x="102" y="206" text-anchor="middle" font-size="9" fill="var(--muted)">primary / default</text>
+  <rect x="205" y="160" width="165" height="66" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="205" y="160" width="4" height="66" rx="2" fill="var(--iris)"/>
+  <text x="287" y="188" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">CoreWeave</text>
+  <text x="287" y="206" text-anchor="middle" font-size="9" fill="var(--muted)">K8s-native</text>
+  <rect x="390" y="160" width="165" height="66" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="390" y="160" width="4" height="66" rx="2" fill="var(--amber)"/>
+  <text x="472" y="188" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">RunPod</text>
+  <text x="472" y="206" text-anchor="middle" font-size="9" fill="var(--muted)">burst / overflow</text>
+  <rect x="575" y="160" width="165" height="66" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="575" y="160" width="4" height="66" rx="2" fill="var(--rose)"/>
+  <text x="657" y="188" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">Lambda Cloud</text>
+  <text x="657" y="206" text-anchor="middle" font-size="9" fill="var(--muted)">reserved</text>
+  <line x1="102" y1="226" x2="350" y2="288" stroke="var(--line)" stroke-width="1.3" marker-end="url(#ah2)"/>
+  <line x1="287" y1="226" x2="365" y2="288" stroke="var(--line)" stroke-width="1.3" marker-end="url(#ah2)"/>
+  <line x1="472" y1="226" x2="395" y2="288" stroke="var(--line)" stroke-width="1.3" marker-end="url(#ah2)"/>
+  <line x1="657" y1="226" x2="410" y2="288" stroke="var(--line)" stroke-width="1.3" marker-end="url(#ah2)"/>
+  <rect x="140" y="290" width="480" height="56" rx="11" fill="var(--panel-2)" stroke="var(--signal)" stroke-width="1.5"/>
+  <text x="380" y="316" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">same Inspect sandbox contract</text>
+  <text x="380" y="334" text-anchor="middle" font-size="9.5" fill="var(--muted)">logs -&gt; S3 · metrics -&gt; backend · run_id</text>
+</svg>
+    <figcaption><b>Provider router.</b> One interface, four backends. Adapters differ; the job spec and result format do not.</figcaption>
+  </figure>
+
+  <div class="grid-2" style="margin-top:8px;">
+    <div class="cap"><span class="ico">// PRIMARY</span><h3>AWS EKS — default</h3>
+      <p>GPU node groups on spot, scale-to-zero via Karpenter. The default target: tightest integration with the control plane, IRSA, and network inspectability.</p>
+    </div>
+    <div class="cap"><span class="ico">// K8S-NATIVE</span><h3>CoreWeave</h3>
+      <p>Kubernetes-first GPU cloud, often cheaper and broader on GPU types. Joins the same sandbox model as a managed cluster, so agentic evals run with minimal adaptation.</p>
+    </div>
+    <div class="cap"><span class="ico">// BURST</span><h3>RunPod</h3>
+      <p>Fast, cheap on-demand and spot pods for burst capacity when AWS GPU quota is tight. Driven via its API/Terraform provider; best for parallel non-sandbox or container-sandboxed runs.</p>
+    </div>
+    <div class="cap"><span class="ico">// RESERVED</span><h3>Lambda Cloud</h3>
+      <p>Cost-effective reserved GPU instances for predictable, sustained eval campaigns. Provisioned as remote Docker-sandbox hosts joined to the platform.</p>
+    </div>
+  </div>
+
+  <div class="callout panel" style="margin-top:18px;">
+    <h3 style="margin-top:0;">How portability is kept honest</h3>
+    <p style="color:var(--muted); margin:0;">Each provider is a Terraform module behind a common interface — <code>gpu_provider</code> selects the adapter, the rest of the spec is unchanged. The hard differences (K8s sandbox vs. Docker-sandbox-on-a-host, private networking, egress logging) are absorbed in the adapter so the eval definition never changes. <b style="color:var(--ink)">Network inspectability is strongest on the K8s providers</b> (AWS, CoreWeave) via NetworkPolicy + Hubble; on host-based providers (RunPod, Lambda) egress is captured at the host/proxy instead — a tradeoff the router records per run so the audit trail stays truthful about which guarantees applied.</p>
+  </div>
+
+  <pre style="margin-top:16px;"><span class="c"># A job spec is provider-agnostic; the router resolves placement.</span>
+<span class="a">task</span>:        inspect_evals/swe_bench_verified
+<span class="a">model</span>:       anthropic/claude-...        <span class="c"># or a self-hosted vLLM endpoint</span>
+<span class="a">sandbox</span>:     k8s                         <span class="c"># none | docker | k8s</span>
+<span class="a">gpu</span>:         { type: a100, count: 1 }
+<span class="a">placement</span>:   { provider: auto, max_usd_per_hr: <span class="s">1.20</span>, prefer: [aws, coreweave] }
+<span class="c"># provider: auto → router picks cheapest backend meeting capacity + sandbox class</span></pre>
+</div></section>
+
+<!-- ===== IaC ===== -->
+<section id="iac"><div class="wrap">
+  <div class="sec-label"><span class="tag">13</span> Provisioning</div>
+  <h2>Everything in Terraform</h2>
+  <p class="sec-intro">No console clicks. Reusable modules, remote state with locking, separate environments. Observability, network, GPU providers, and the delivery pipeline are all modules — capability is provisioned, not bolted on.</p>
+  <pre><span class="c"># terraform/ — module layout</span>
+terraform/
+  modules/
+    networking/         <span class="c"># VPC, subnets, SGs, NAT, VPC Flow Logs → S3</span>
+    control-plane/      <span class="c"># Fargate API, SQS, DLQ, OTel collector, provider router</span>
+    state-store/        <span class="c"># RDS Postgres, schema/migrations</span>
+    fargate-executor/   <span class="c"># non-sandbox eval tasks</span>
+    eks/                <span class="c"># cluster, node groups, IRSA, Karpenter</span>
+    eks-sandbox-config/ <span class="c"># AISI k8s-sandbox: NetworkPolicy, Cilium/Hubble</span>
+    gpu-providers/      <span class="c"># one adapter per backend, common interface:</span>
+      aws-gpu/          <span class="c">#   EKS GPU node groups (spot) — default</span>
+      coreweave/        <span class="c">#   K8s-native GPU cloud — join sandbox model</span>
+      runpod/           <span class="c">#   burst pods via API/provider</span>
+      lambda-cloud/     <span class="c">#   reserved GPU hosts (Docker sandbox)</span>
+    inference-vllm/     <span class="c"># OPTIONAL self-hosted model serving + DCGM</span>
+    logging/            <span class="c"># CloudWatch Logs, S3 export, OpenSearch (opt)</span>
+    observability/      <span class="c"># Prometheus, Grafana, OTel, alarms (tiered)</span>
+    audit/              <span class="c"># CloudTrail, Config, GuardDuty, write-once S3</span>
+    finops/             <span class="c"># budgets, cost tags, Cost Explorer wiring</span>
+    storage/            <span class="c"># S3 log/result buckets + lifecycle</span>
+    dashboard/          <span class="c"># the console service + read APIs</span>
+    cicd/               <span class="c"># ECR, GitHub OIDC roles, environments, branch protection</span>
+  envs/
+    dev/                prod/
+  backend.tf            <span class="c"># S3 + DynamoDB remote state + locking</span></pre>
+  <div class="callout panel" style="margin-top:16px;">
+    <p style="margin:0; color:var(--muted);"><b style="color:var(--amber);">Timeline risk —</b> <code>eks-sandbox-config</code> is the slowest, highest-risk module. Confirm the current AISI k8s-sandbox cluster requirements (CNI, NetworkPolicy, version constraints) from <a href="https://k8s-sandbox.aisi.org.uk">k8s-sandbox.aisi.org.uk</a> before writing it; that is where days get lost. Build <code>gpu-providers/aws-gpu</code> first and add the others only once the common interface is proven.</p>
+  </div>
+</div></section>
+
+<!-- ===== ci/cd + gitops ===== -->
+<section id="git"><div class="wrap">
+  <div class="sec-label"><span class="tag">14</span> CI/CD &amp; GitOps</div>
+  <h2>The repository is the control surface</h2>
+  <p class="sec-intro">Nothing reaches the platform except through Git. Infrastructure, eval definitions, and the dashboard all ship through the same reviewed, scanned, gated pipeline — so the live system always matches a known commit, and every change is auditable.</p>
+
+  <h3>The GitOps loop</h3>
+  <figure class="diagram">
+    <svg viewBox="0 0 760 392" width="100%" role="img" aria-label="GitOps loop diagram" font-family="'JetBrains Mono',monospace">
+  <defs><marker id="ah3" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7.5,3 L0,6 Z" fill="var(--signal)"/></marker></defs>
+  <rect x="60" y="40" width="200" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="60" y="40" width="4" height="60" rx="2" fill="var(--iris)"/>
+  <text x="160" y="66" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">branch</text>
+  <text x="160" y="84" text-anchor="middle" font-size="9" fill="var(--muted)">feature work</text>
+  <rect x="430" y="24" width="290" height="104" rx="11" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="430" y="24" width="4" height="104" rx="2" fill="var(--amber)"/>
+  <text x="575" y="50" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">CI · on pull_request</text>
+  <text x="575" y="72" text-anchor="middle" font-size="9.5" fill="var(--muted)">fmt · validate · tflint · checkov</text>
+  <text x="575" y="90" text-anchor="middle" font-size="9.5" fill="var(--muted)">terraform plan -&gt; PR comment</text>
+  <text x="575" y="108" text-anchor="middle" font-size="9.5" fill="var(--muted)">policy gate (OPA / Conftest)</text>
+  <line x1="260" y1="64" x2="426" y2="64" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ah3)"/>
+  <text x="343" y="56" text-anchor="middle" font-size="9.5" fill="var(--muted)">open PR</text>
+  <rect x="60" y="236" width="200" height="60" rx="10" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="60" y="236" width="4" height="60" rx="2" fill="var(--signal)"/>
+  <text x="160" y="262" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">main</text>
+  <text x="160" y="280" text-anchor="middle" font-size="9" fill="var(--muted)">desired state</text>
+  <line x1="455" y1="128" x2="262" y2="244" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ah3)"/>
+  <text x="392" y="180" text-anchor="middle" font-size="9.5" fill="var(--muted)">all green + approval -&gt; merge</text>
+  <rect x="430" y="220" width="290" height="104" rx="11" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5"/>
+  <rect x="430" y="220" width="4" height="104" rx="2" fill="var(--signal)"/>
+  <text x="575" y="246" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="600" fill="var(--ink)">CD · on push:main</text>
+  <text x="575" y="268" text-anchor="middle" font-size="9.5" fill="var(--muted)">OIDC assume-role · no stored keys</text>
+  <text x="575" y="286" text-anchor="middle" font-size="9.5" fill="var(--muted)">apply dev -&gt; (manual) prod</text>
+  <text x="575" y="304" text-anchor="middle" font-size="9.5" fill="var(--muted)">build + push images -&gt; ECR</text>
+  <line x1="260" y1="266" x2="426" y2="266" stroke="var(--signal)" stroke-width="1.6" marker-end="url(#ah3)"/>
+  <text x="343" y="258" text-anchor="middle" font-size="9.5" fill="var(--muted)">push:main</text>
+  <path d="M 575 324 L 575 362 L 30 362 L 30 70 L 56 70" fill="none" stroke="var(--iris)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ah3)"/>
+  <text x="300" y="378" text-anchor="middle" font-size="9.5" fill="var(--iris)">drift detect (cron) · terraform plan -&gt; alert if live != main</text>
+</svg>
+    <figcaption><b>GitOps loop.</b> PR is the only write path. Main is the desired state; scheduled drift detection flags any divergence between the live account and the repo.</figcaption>
+  </figure>
+
+  <h3>Two pipelines, one repo</h3>
+  <div class="grid-2">
+    <div class="cap"><span class="ico">// PIPELINE A</span><h3>Infrastructure delivery</h3>
+      <ul>
+        <li><b>PR:</b> <code>terraform fmt/validate</code>, <code>tflint</code>, <code>checkov</code>, and <code>terraform plan</code> posted to the PR</li>
+        <li><b>Policy gate:</b> OPA/Conftest rejects cost or security anti-patterns (e.g. a public bucket, an un-pinned EKS version)</li>
+        <li><b>Merge → main:</b> auto-apply to <code>dev</code>; <code>prod</code> requires a manual environment approval</li>
+        <li><b>Drift detection:</b> scheduled plan; alert if the account no longer matches main</li>
+      </ul>
+    </div>
+    <div class="cap"><span class="ico">// PIPELINE B</span><h3>Eval delivery</h3>
+      <ul>
+        <li><b>Eval specs live in the repo</b> under <code>eval-specs/</code>, versioned and reviewed like code</li>
+        <li><b>PR label or merge</b> triggers a run via the control-plane API</li>
+        <li><b>Run pinned</b> to the spec's <code>git_sha</code> + seed + model version for exact replay</li>
+        <li><b>Results post back</b> to the PR as a summary comment; dashboard links to the commit</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Paved-path repository settings</h3>
+  <p class="sec-intro" style="margin-bottom:18px;">The "paved path" is the easy, safe default: do the normal thing through these settings and you cannot push an unreviewed or unscanned change. The conventions are themselves codified (e.g. via a Terraform GitHub provider) so the repo's rules are reviewable too.</p>
+  <div class="ladder">
+    <div class="lvl" style="color:var(--signal)">BRANCH</div>
+    <div class="desc"><b>Protected <code>main</code>.</b> No direct pushes; PR required; linear history. Required status checks: <code>plan</code>, <code>tflint</code>, <code>checkov</code>, policy gate — all must pass before merge.</div>
+    <div class="lvl">REVIEW</div>
+    <div class="desc"><b>≥1 approving review</b>, stale approvals dismissed on new commits, and <b>CODEOWNERS</b> routing — <code>infra/</code> to platform owners, <code>eval-specs/</code> to eval owners.</div>
+    <div class="lvl">IDENTITY</div>
+    <div class="desc"><b>OIDC, no long-lived keys.</b> GitHub Environments (<code>dev</code>, <code>prod</code>) hold the assume-role config; <code>prod</code> has required reviewers and a wait timer. Signed commits encouraged.</div>
+    <div class="lvl">HYGIENE</div>
+    <div class="desc"><b>Secret scanning + push protection</b> on, Dependabot for actions and providers, pre-commit hooks (<code>fmt</code>, <code>tflint</code>, gitleaks) so problems are caught before CI.</div>
+    <div class="lvl">PROVENANCE</div>
+    <div class="desc"><b>Conventional commits + tagged releases.</b> Each platform release is a tag; each run records the release it ran under, closing the loop from result back to source.</div>
+  </div>
+
+  <h3>Repository layout</h3>
+  <pre><span class="c"># one repo, clear ownership boundaries</span>
+inspect-control-plane/
+  infra/                  <span class="c"># Terraform root + modules (Pipeline A)  → CODEOWNERS: @platform</span>
+  eval-specs/             <span class="c"># declarative eval job specs (Pipeline B) → CODEOWNERS: @evals</span>
+  services/
+    control-plane/        <span class="c"># API + provider router source</span>
+    dashboard/            <span class="c"># console source</span>
+  policy/                 <span class="c"># OPA/Conftest rules (cost + security gates)</span>
+  .github/
+    workflows/
+      infra-plan.yml      <span class="c"># PR: fmt, validate, tflint, checkov, plan, policy</span>
+      infra-apply.yml     <span class="c"># main: OIDC apply dev → prod (gated)</span>
+      eval-run.yml        <span class="c"># label/merge: trigger run, post results to PR</span>
+      drift-detect.yml    <span class="c"># cron: plan, alert on divergence</span>
+    CODEOWNERS
+  .pre-commit-config.yaml
+  README.md               <span class="c"># this document</span></pre>
+
+  <pre style="margin-top:16px;"><span class="c"># .github/workflows/infra-apply.yml — gated, keyless apply (sketch)</span>
+<span class="a">on</span>: { push: { branches: [main] } }
+<span class="a">permissions</span>: { id-token: <span class="s">write</span>, contents: <span class="s">read</span> }   <span class="c"># OIDC — no stored cloud keys</span>
+<span class="a">jobs</span>:
+  apply-dev:
+    <span class="a">environment</span>: dev                <span class="c"># auto</span>
+    <span class="a">steps</span>: [ assume-role (OIDC), terraform apply -auto-approve ]
+  apply-prod:
+    <span class="a">needs</span>: apply-dev
+    <span class="a">environment</span>: prod               <span class="c"># required reviewers + wait timer</span>
+    <span class="a">steps</span>: [ assume-role (OIDC), terraform apply ]</pre>
+</div></section>
+
+<!-- ===== plan ===== -->
+<section id="plan"><div class="wrap">
+  <div class="sec-label"><span class="tag">15</span> Build sequence</div>
+  <h2>Phased plan</h2>
+  <p class="sec-intro">Built so it is demoable at the end of each phase. A finished narrow version always beats an unfinished broad one.</p>
+  <div class="timeline">
+    <div class="tl"><div class="wk">Phase 1 · Wk 1–2</div><h3>Foundations + the easy path</h3><p>Remote state, networking, storage, RDS, Secrets Manager, audit baseline (CloudTrail). Control-plane API + SQS. The CI pipeline (fmt, tflint, checkov, plan) and paved-path repo settings are in place from day one. Fargate executor runs non-sandbox API-model evals end to end; logs and <code>.eval</code> transcripts to S3; a first dashboard pane reads them. Demoable: open a PR, watch it plan and gate, merge, then submit a model-graded eval.</p></div>
+    <div class="tl"><div class="wk">Phase 2 · Wk 3–4</div><h3>The router + agentic path</h3><p>EKS via Terraform; AISI k8s-sandbox configured with NetworkPolicy and Cilium/Hubble; run a sandboxed agentic eval from an in-cluster job. Router places jobs on Fargate vs. EKS by spec. Network inspectability pane goes live. Demoable: one platform, both eval types, with egress flows captured.</p></div>
+    <div class="tl"><div class="wk">Phase 3 · Wk 5–6</div><h3>Observability, FinOps, active control</h3><p>Prometheus/Grafana + OTel traces; DCGM when GPU nodes are up. Tiered logging/monitoring flags, cost tags, budgets, per-run cost. Dashboard gains active actions (pause / kill / requeue / set-budget) with audit events. Scale-to-zero + spot. Demoable: the full console, account-to-sample, with the cost story.</p></div>
+    <div class="tl"><div class="wk">Phase 4 · Stretch</div><h3>Multi-provider GPU &amp; deeper GitOps</h3><p>Add the <code>gpu-providers/</code> adapters beyond AWS — CoreWeave, RunPod, Lambda Cloud — behind the provider router, plus optional self-hosted vLLM and OpenSearch. PR-triggered eval runs with results link-back, and scheduled drift detection. Demoable: a job placed on the cheapest qualifying provider, end-to-end from a committed spec to a result posted on the PR.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p><b>Inspect Control Plane</b> — platform design specification.</p>
+  <p>Scope boundaries, stated deliberately: no novel evals (use <code>inspect_evals</code>); no custom sandbox provider (use built-in Docker / K8s sandboxes); control plane and state on AWS, with GPU compute portable to RunPod, Lambda Cloud, and CoreWeave; Azure intentionally excluded. Stating limits keeps the project honest for the people who adopt it.</p>
+  <p style="margin-top:14px; color:var(--line);">— end of document —</p>
+</div></footer>
+
+<!-- floating contents / back-to-top -->
+<div class="fab">
+  <a href="#toc"><b>☰</b> <span>Contents</span></a>
+  <a href="#top"><b>↑</b> <span>Top</span></a>
+</div>
+
+<script>
+  // Dashboard tab switching — the one piece of interaction, kept minimal.
+  document.querySelectorAll('.dash-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var pane = tab.getAttribute('data-pane');
+      document.querySelectorAll('.dash-tab').forEach(function(t){ t.classList.remove('on'); });
+      document.querySelectorAll('.dash-pane').forEach(function(p){ p.classList.remove('on'); });
+      tab.classList.add('on');
+      document.getElementById(pane).classList.add('on');
+    });
+  });
+  // Active-action buttons: demonstrate the "deliberate + audited" intent without real mutation.
+  document.querySelectorAll('.btn.active').forEach(function(b){
+    b.addEventListener('click', function(){
+      var original = b.textContent;
+      b.textContent = '✓ audited';
+      setTimeout(function(){ b.textContent = original; }, 1100);
+    });
+  });
+</script>
+</body>
+</html>
