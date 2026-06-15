@@ -1,0 +1,6 @@
+# Default owner for everything (reviews route here).
+*           @ka61
+
+# Examples and infra can have dedicated owners as the repo grows.
+/examples/  @ka61
+/.github/   @ka61

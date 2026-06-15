@@ -1,1 +1,104 @@
-# evalsv3
+# evalsv3 — learning Inspect
+
+A hands-on repo for learning the [UK AISI **Inspect**](https://inspect.aisi.org.uk/)
+framework for evaluating language models. It pairs a set of runnable examples
+(increasing in complexity) with deep-dive HTML guides.
+
+> New to evals? Start with the guide in [`docs/`](docs/), then run the examples
+> below in order.
+
+## Quickstart
+
+```bash
+# 1. clone
+git clone git@github.com:ka61/evalsv3.git
+cd evalsv3
+
+# 2. create an environment (uv recommended; venv shown here)
+python -m venv .venv && source .venv/bin/activate
+
+# 3. install
+pip install -r requirements.txt
+
+# 4. add your keys
+cp .env.example .env        # then edit .env
+
+# 5. run your first eval
+inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini --limit 5
+inspect view                # browse the .eval log in your browser
+```
+
+Requires **Python ≥ 3.10**. Examples 04–05 also need **Docker** running.
+
+## Open it in VS Code
+
+1. Install the recommended extensions when prompted (or from the Extensions
+   view) — the official **Inspect AI** extension (`ukaisi.inspect-ai`), Python,
+   and Ruff. They're listed in [`.vscode/extensions.json`](.vscode/extensions.json).
+2. Select your `.venv` as the interpreter (**Python: Select Interpreter**).
+3. Set keys via the extension's **Configuration (.env)** panel, or edit `.env`.
+4. Open any `task.py` and use **Run Task** / **Debug Task** from the Inspect
+   activity bar; logs open inline.
+
+Prefer containers? Reopen in the provided **dev container**
+([`.devcontainer/`](.devcontainer/)) for a ready-made Python + Docker setup.
+
+## Examples
+
+Work through these in order — each adds one concept. Full index in
+[`examples/`](examples/README.md).
+
+| # | Example | Teaches | Docker |
+|---|---------|---------|--------|
+| 01 | [`01_hello`](examples/01_hello/) | the core loop: dataset → solver → model-graded scorer | – |
+| 02 | [`02_multiple_choice`](examples/02_multiple_choice/) | deterministic `choice` scoring | – |
+| 03 | [`03_tools`](examples/03_tools/) | a custom `@tool` the model calls | – |
+| 04 | [`04_sandbox_agent`](examples/04_sandbox_agent/) | a `react` agent + `bash` in a Docker sandbox | ✓ |
+| 05 | [`05_custom_scorer`](examples/05_custom_scorer/) | custom scorer running `pytest`; image from a Dockerfile | ✓ |
+
+## Repository layout
+
+```
+evalsv3/
+  examples/            # the learning path (01 → 05), each with its own README
+  docs/                # deep-dive HTML guides (open in a browser)
+    inspect-evals-guide.html      # detailed how-to for Inspect
+    inspect-platform-design.html  # a platform design spec
+    implementation-plan.html      # build plan for that platform
+  .vscode/             # recommended extensions + settings
+  .devcontainer/       # one-click reproducible environment
+  .github/             # CI, manual eval workflow, CODEOWNERS, templates
+  scripts/setup_github.sh   # configure repo secrets + branch protection
+  .env.example         # copy to .env and add your keys
+  requirements.txt
+```
+
+## Models
+
+Set a default in `.env` (`INSPECT_EVAL_MODEL`) or pass `--model provider/name`:
+
+- `openai/gpt-4o-mini` · `openai/gpt-4o`
+- `anthropic/claude-sonnet-4-0`
+- `deepseek/deepseek-chat`
+- self-hosted: `vllm/<hf-model>` (needs a GPU)
+
+## Contributing & the paved path
+
+This is set up for **solo learning**, so you can push directly to `main` — CI
+(`ruff` + import checks) still runs on every push, and force-pushes/branch
+deletion are blocked for safety. PRs are optional but recommended once you're
+collaborating; see [CONTRIBUTING.md](CONTRIBUTING.md). One-time repo setup
+(secrets, settings, light branch safety):
+
+```bash
+./scripts/setup_github.sh      # needs the GitHub CLI + admin on the repo
+```
+
+The script contains a commented stricter block (require CI + 1 review, no direct
+pushes) to switch on later.
+
+## Secrets
+
+Keys live only in your local `.env` (gitignored) and in GitHub Actions Secrets
+(`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`). Never commit a key —
+`gitleaks` (pre-commit) and GitHub push protection are there to catch slips.

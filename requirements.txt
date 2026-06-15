@@ -1,0 +1,9 @@
+# Core framework
+inspect-ai>=0.3.130
+
+# Model provider SDKs (DeepSeek is reached via the OpenAI-compatible client)
+openai
+anthropic
+
+# The community collection of 200+ ready-made evals (optional but recommended)
+inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals

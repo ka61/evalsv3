@@ -1,0 +1,11 @@
+# Sandbox definition for this task. Uses the official Inspect tool-support image
+# (which already contains bash/python/editor tool support), with resource limits
+# and no network access. Inspect auto-discovers this file.
+services:
+  default:
+    image: aisiuk/inspect-tool-support
+    init: true
+    command: tail -f /dev/null
+    cpus: 1.0
+    mem_limit: 0.5gb
+    network_mode: none

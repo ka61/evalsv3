@@ -1,0 +1,39 @@
+name: Run eval (manual)
+
+# Manually trigger a small eval from the Actions tab. Demonstrates using the
+# repository secrets (set via scripts/setup_github.sh). Keep limits small.
+on:
+  workflow_dispatch:
+    inputs:
+      example:
+        description: "Path to a task.py"
+        default: "examples/01_hello/task.py"
+      model:
+        description: "Model (provider/name)"
+        default: "openai/gpt-4o-mini"
+      limit:
+        description: "Sample limit"
+        default: "5"
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install inspect-ai openai anthropic
+      - name: Run eval
+        run: inspect eval "${{ inputs.example }}" --model "${{ inputs.model }}" --limit "${{ inputs.limit }}" --log-dir ./logs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-logs
+          path: logs/

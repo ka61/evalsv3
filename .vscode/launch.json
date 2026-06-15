@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Inspect: eval current file (limit 1)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/.venv/bin/inspect",
+      "args": ["eval", "${file}", "--limit", "1"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
+}
