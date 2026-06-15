@@ -88,6 +88,17 @@ Work through these in order — each adds one concept. Full annotated index in
 | 18 | [`18_apollo_deception`](examples/18_apollo_deception/) | 🛡️ strategic deception (lying to reach a goal) | – |
 | 19 | [`19_apollo_scheming_oversight`](examples/19_apollo_scheming_oversight/) | 🛡️🧠 scheming (covertly disabling oversight) | ✓ |
 
+**Scheming with images** — Apollo concepts where the cue or task is visual
+
+| # | Example | Teaches | Docker |
+|---|---------|---------|--------|
+| 20 | [`20_scheming_eval_awareness`](examples/20_scheming_eval_awareness/) | 🛡️🖼️ situational awareness (spot an eval from a screenshot) | – |
+| 21 | [`21_scheming_visual_sandbagging`](examples/21_scheming_visual_sandbagging/) | 🛡️🖼️ visual sandbagging (underperform on a vision task) | – |
+| 22 | [`22_scheming_visual_oversight`](examples/22_scheming_visual_oversight/) | 🛡️🖼️🧠 scheming with a visual oversight cue | ✓ |
+
+Data details for every example, plus a table of popular benchmarks, are in
+[`DATASETS.md`](DATASETS.md).
+
 ## Repository layout
 
 ```

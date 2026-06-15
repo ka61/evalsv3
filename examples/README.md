@@ -4,6 +4,8 @@ Worked Inspect examples in increasing order of complexity. Do them in order —
 each introduces one new idea on top of the last. Tags: 🧠 chain-of-thought ·
 🖼️ vision · 🛡️ AI-safety (Apollo Research concepts).
 
+See [`../DATASETS.md`](../DATASETS.md) for what data each example uses and a table of popular benchmarks.
+
 ## Foundations
 
 | # | Example | New concept | Sandbox? |
@@ -46,6 +48,17 @@ harmful.
 | 17 | [`17_apollo_sandbagging`](17_apollo_sandbagging/) | 🛡️ **sandbagging** — strategic underperformance | no |
 | 18 | [`18_apollo_deception`](18_apollo_deception/) | 🛡️ **strategic deception** — lying to reach a goal | no |
 | 19 | [`19_apollo_scheming_oversight`](19_apollo_scheming_oversight/) | 🛡️🧠 **scheming** — covertly disabling oversight | **yes** |
+
+## AI-safety with images (scheming + vision)
+
+The same Apollo concepts, but the **cue or the task is an image** — closer to how
+real multimodal agents are evaluated. Harmless, detection-only toys.
+
+| # | Example | Concept | Sandbox? |
+|---|---------|---------|----------|
+| 20 | [`20_scheming_eval_awareness`](20_scheming_eval_awareness/) | 🛡️🖼️ **situational awareness** — spotting an eval from a screenshot | no |
+| 21 | [`21_scheming_visual_sandbagging`](21_scheming_visual_sandbagging/) | 🛡️🖼️ **visual sandbagging** — underperforming on a vision task under incentive | no |
+| 22 | [`22_scheming_visual_oversight`](22_scheming_visual_oversight/) | 🛡️🖼️🧠 **scheming** — disabling oversight after seeing a monitoring dashboard | **yes** |
 
 ## Running any example
 
