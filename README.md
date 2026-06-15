@@ -45,8 +45,11 @@ Prefer containers? Reopen in the provided **dev container**
 
 ## Examples
 
-Work through these in order — each adds one concept. Full index in
-[`examples/`](examples/README.md).
+Work through these in order — each adds one concept. Full annotated index in
+[`examples/README.md`](examples/README.md). Tags: 🧠 chain-of-thought ·
+🖼️ vision · 🛡️ AI-safety.
+
+**Foundations**
 
 | # | Example | Teaches | Docker |
 |---|---------|---------|--------|
@@ -55,6 +58,35 @@ Work through these in order — each adds one concept. Full index in
 | 03 | [`03_tools`](examples/03_tools/) | a custom `@tool` the model calls | – |
 | 04 | [`04_sandbox_agent`](examples/04_sandbox_agent/) | a `react` agent + `bash` in a Docker sandbox | ✓ |
 | 05 | [`05_custom_scorer`](examples/05_custom_scorer/) | custom scorer running `pytest`; image from a Dockerfile | ✓ |
+
+**Going deeper**
+
+| # | Example | Teaches | Docker |
+|---|---------|---------|--------|
+| 06 | [`06_hf_dataset`](examples/06_hf_dataset/) | 🧠 GSM8K from the Hub + chain-of-thought | – |
+| 07 | [`07_multiple_scorers`](examples/07_multiple_scorers/) | several scorers on one task | – |
+| 08 | [`08_epochs_reliability`](examples/08_epochs_reliability/) | epochs & pass@k | – |
+| 09 | [`09_model_roles`](examples/09_model_roles/) | model roles (grader / red-team) | – |
+| 10 | [`10_limits_guardrails`](examples/10_limits_guardrails/) | message/token/time limits + caps | ✓ |
+| 11 | [`11_web_search_agent`](examples/11_web_search_agent/) | a research agent with `web_search` | – |
+| 12 | [`12_reasoning_cot`](examples/12_reasoning_cot/) | 🧠 reasoning models + `self_critique` | – |
+| 13 | [`13_eval_set`](examples/13_eval_set/) | running a suite with `eval_set` | – |
+
+**Vision**
+
+| # | Example | Teaches | Docker |
+|---|---------|---------|--------|
+| 14 | [`14_image_vqa`](examples/14_image_vqa/) | 🖼️ single-image Q&A | – |
+| 15 | [`15_image_chart`](examples/15_image_chart/) | 🖼️ chart reading | – |
+| 16 | [`16_image_compare`](examples/16_image_compare/) | 🖼️ comparing two images | – |
+
+**AI-safety concepts (Apollo Research)** — harmless toy evals that *measure* the behaviour
+
+| # | Example | Teaches | Docker |
+|---|---------|---------|--------|
+| 17 | [`17_apollo_sandbagging`](examples/17_apollo_sandbagging/) | 🛡️ sandbagging (strategic underperformance) | – |
+| 18 | [`18_apollo_deception`](examples/18_apollo_deception/) | 🛡️ strategic deception (lying to reach a goal) | – |
+| 19 | [`19_apollo_scheming_oversight`](examples/19_apollo_scheming_oversight/) | 🛡️🧠 scheming (covertly disabling oversight) | ✓ |
 
 ## Repository layout
 
