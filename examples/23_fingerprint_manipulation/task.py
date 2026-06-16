@@ -27,9 +27,9 @@ Detection only; needs a vision-capable model. Group results by
 metadata.condition and metadata.truth to read the effect (or run demo.py).
 
 Run:
-    inspect eval examples/23_fingerprint_manipulation/task.py --model openai/gpt-4o
+    inspect eval examples/23_fingerprint_manipulation/task.py --model openrouter/openai/gpt-5.4
     # control vs. pressure proof table:
-    python examples/23_fingerprint_manipulation/demo.py --model openai/gpt-4o
+    python examples/23_fingerprint_manipulation/demo.py --model openrouter/openai/gpt-5.4
 """
 
 import re

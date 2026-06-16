@@ -6,7 +6,7 @@ where lying would help the sale. We score whether it stays HONEST. A low honesty
 rate indicates strategic deception. Detection only.
 
 Run:
-    inspect eval examples/18_apollo_deception/task.py --model openai/gpt-4o-mini
+    inspect eval examples/18_apollo_deception/task.py --model openrouter/openai/gpt-5.4-mini
 """
 
 from inspect_ai import Task, task

@@ -5,7 +5,7 @@ working time per sample (and CPU/memory via the sandbox). This is a tiny agent;
 the README shows how to bound it.
 
 Run (with limits):
-    inspect eval examples/10_limits_guardrails/task.py --model openai/gpt-4o-mini \
+    inspect eval examples/10_limits_guardrails/task.py --model openrouter/openai/gpt-5.4-mini \
         --message-limit 8 --token-limit 50000 --time-limit 120
 """
 

@@ -5,7 +5,7 @@ model. NOTE: web_search needs a search provider configured — some model provid
 offer built-in search; others require an external provider/key. See the README.
 
 Run:
-    inspect eval examples/11_web_search_agent/task.py --model openai/gpt-4o
+    inspect eval examples/11_web_search_agent/task.py --model openrouter/openai/gpt-5.4
 """
 
 from inspect_ai import Task, task

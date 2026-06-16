@@ -52,7 +52,7 @@ If you don't have one configured, use example 12 instead (no external calls).
 ## Run it
 
 ```bash
-inspect eval examples/11_web_search_agent/task.py --model openai/gpt-4o
+inspect eval examples/11_web_search_agent/task.py --model openrouter/openai/gpt-5.4
 ```
 
 ## What happens, step by step

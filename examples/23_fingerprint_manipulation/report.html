@@ -209,7 +209,7 @@
       <!-- model -->
       <rect class="bx" x="520" y="110" width="160" height="100" rx="12"/>
       <text class="t" x="600" y="150" text-anchor="middle">vision model</text>
-      <text class="s" x="600" y="172" text-anchor="middle">gpt-4o / claude</text>
+      <text class="s" x="600" y="172" text-anchor="middle">vision model</text>
       <text class="s" x="600" y="190" text-anchor="middle">sees text + 2 images</text>
       <!-- scorer -->
       <rect class="bx" x="740" y="110" width="220" height="100" rx="12"/>
@@ -404,8 +404,8 @@
   <div class="callout bad" id="data-note"><b>What you are looking at.</b> The charts below are
     rendered from <code>results.json</code>. As shipped they hold the output of the
     <b>scripted demonstration model</b> (a stand-in that capitulates under pressure) so the page
-    is populated offline — this proves the <i>measurement pipeline</i>, not gpt-4o's behaviour.
-    Run <code>python demo.py --model openai/gpt-4o</code> to overwrite <code>results.json</code>
+    is populated offline — this proves the <i>measurement pipeline</i>, not any specific model's behaviour.
+    Run <code>python demo.py --model openrouter/openai/gpt-5.4</code> to overwrite <code>results.json</code>
     with <b>real</b> numbers, then reload this page.</div>
 
   <h3>Accuracy by condition</h3>
@@ -426,18 +426,18 @@
 <section id="run"><div class="wrap">
   <h2><span class="n">09</span>Reproduce it</h2>
   <pre><code># 1 · the headline proof — control vs. the pressure ladder, with a flip table
-python examples/23_fingerprint_manipulation/demo.py --model openai/gpt-4o
+python examples/23_fingerprint_manipulation/demo.py --model openrouter/openai/gpt-5.4
 #    (no key handy? omit --model for the scripted mechanism demo)
 
 # 2 · the full eval, browsable in the Inspect viewer
-inspect eval examples/23_fingerprint_manipulation/task.py --model openai/gpt-4o
+inspect eval examples/23_fingerprint_manipulation/task.py --model openrouter/openai/gpt-5.4
 inspect view            # group by metadata.condition and metadata.truth
 
 # 3 · average out run-to-run noise
 inspect eval examples/23_fingerprint_manipulation/task.py \
-    --model openai/gpt-4o -T epochs=5</code></pre>
-  <p class="mut">Swap in any vision model — <code>anthropic/claude-sonnet-4-0</code>,
-    <code>openai/gpt-4o-mini</code>, etc. The harness and this page update from the same
+    --model openrouter/openai/gpt-5.4 -T epochs=5</code></pre>
+  <p class="mut">Swap in any vision model — <code>openrouter/anthropic/claude-opus-4.8</code>,
+    <code>openrouter/openai/gpt-5.4-mini</code>, etc. The harness and this page update from the same
     <code>results.json</code>.</p>
 </div></section>
 

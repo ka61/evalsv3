@@ -7,7 +7,7 @@ read a file that we mount into the sandbox and report its contents.
 Requires Docker to be running. Inspect discovers the compose.yaml in this folder.
 
 Run:
-    inspect eval examples/04_sandbox_agent/task.py --model openai/gpt-4o-mini
+    inspect eval examples/04_sandbox_agent/task.py --model openrouter/openai/gpt-5.4-mini
     docker ps          # watch sandboxes while it runs
     inspect view
 """

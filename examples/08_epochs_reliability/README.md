@@ -40,8 +40,8 @@ def reliability():
 
 ```bash
 # epochs from the task (5), or override on the CLI:
-inspect eval examples/08_epochs_reliability/task.py --model openai/gpt-4o-mini --epochs 5
-inspect eval examples/08_epochs_reliability/task.py --model openai/gpt-4o-mini \
+inspect eval examples/08_epochs_reliability/task.py --model openrouter/openai/gpt-5.4-mini --epochs 5
+inspect eval examples/08_epochs_reliability/task.py --model openrouter/openai/gpt-5.4-mini \
   --epochs 10 --epochs-reducer mean
 ```
 

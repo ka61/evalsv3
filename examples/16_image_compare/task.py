@@ -4,7 +4,7 @@ Put TWO images in one message and ask a relational question. This is the shape o
 many real multimodal evals (spot-the-difference, before/after, consistency).
 
 Run:
-    inspect eval examples/16_image_compare/task.py --model openai/gpt-4o
+    inspect eval examples/16_image_compare/task.py --model openrouter/openai/gpt-5.4
 """
 
 from pathlib import Path

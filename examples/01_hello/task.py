@@ -4,7 +4,7 @@ The smallest possible Inspect eval: ask a few questions and let a grader model
 judge the answers. No tools, no sandbox — just dataset -> solver -> scorer.
 
 Run:
-    inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini
+    inspect eval examples/01_hello/task.py --model openrouter/openai/gpt-5.4-mini
     inspect view
 """
 

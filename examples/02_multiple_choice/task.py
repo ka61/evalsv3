@@ -5,7 +5,7 @@ solver formats the options and parses the model's selection; the `choice`
 scorer checks it against the target letter.
 
 Run:
-    inspect eval examples/02_multiple_choice/task.py --model openai/gpt-4o-mini
+    inspect eval examples/02_multiple_choice/task.py --model openrouter/openai/gpt-5.4-mini
 """
 
 from inspect_ai import Task, task

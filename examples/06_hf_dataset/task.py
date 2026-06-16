@@ -5,7 +5,7 @@ reason step by step (chain-of-thought) and end with a clear final answer, then
 score the number.
 
 Run:
-    inspect eval examples/06_hf_dataset/task.py --model openai/gpt-4o-mini --limit 20
+    inspect eval examples/06_hf_dataset/task.py --model openrouter/openai/gpt-5.4-mini --limit 20
 """
 
 from inspect_ai import Task, task

@@ -24,8 +24,8 @@ matters, what it means, and how to use it. Grouped into tables so you can scan.
 
 | Command | What it does | Example |
 |---|---|---|
-| `inspect eval` | Run one or more tasks | `inspect eval task.py --model openai/gpt-4o` |
-| `inspect eval-set` | Run a **set** of tasks together, retrying failures | `inspect eval-set tasks/ --model openai/gpt-4o --log-dir logs/suite` |
+| `inspect eval` | Run one or more tasks | `inspect eval task.py --model openrouter/openai/gpt-5.4` |
+| `inspect eval-set` | Run a **set** of tasks together, retrying failures | `inspect eval-set tasks/ --model openrouter/openai/gpt-5.4 --log-dir logs/suite` |
 | `inspect eval-retry` | Re-run the failed samples of a previous log | `inspect eval-retry logs/2026-…​.eval` |
 | `inspect view` | Open the interactive log viewer in a browser | `inspect view --log-dir logs` |
 | `inspect score` | Score (or re-score) an existing log | `inspect score logs/…​.eval --scorer model_graded_qa` |
@@ -52,11 +52,11 @@ the Python `eval()` function and most are settable via environment variable
 
 | Flag | Meaning | Example |
 |---|---|---|
-| `--model` | The model under test, as `provider/name`. `--model none` runs tasks that don't need a model. | `--model anthropic/claude-sonnet-4-0` |
+| `--model` | The model under test, as `provider/name`. `--model none` runs tasks that don't need a model. | `--model openrouter/anthropic/claude-opus-4.8` |
 | `--model-base-url` | Override the provider's API base URL (self-hosted / proxy). | `--model-base-url http://localhost:8000/v1` |
 | `--model-config` | A JSON/YAML file of model-client args. | `--model-config model.yaml` |
 | `-M` | A single model-client arg as `key=value` (repeatable). | `-M location=us-east5` |
-| `--model-role` | Bind a **named role** to a model (repeatable). Graders use the `grader` role. | `--model-role grader=openai/gpt-4o` |
+| `--model-role` | Bind a **named role** to a model (repeatable). Graders use the `grader` role. | `--model-role grader=openrouter/openai/gpt-5.4` |
 
 ### Model generation
 
@@ -193,7 +193,7 @@ API keys and common defaults there instead of repeating flags.
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 
-INSPECT_EVAL_MODEL=openai/gpt-4o-mini     # default --model
+INSPECT_EVAL_MODEL=openrouter/openai/gpt-5.4-mini     # default --model
 INSPECT_LOG_DIR=./logs                    # default --log-dir
 INSPECT_LOG_LEVEL=warning
 INSPECT_EVAL_MAX_CONNECTIONS=20
@@ -212,7 +212,7 @@ Most flags have an env equivalent — usually the flag name upper-cased with an
 | `--log-level` | `log_level` | `INSPECT_LOG_LEVEL` |
 | `--log-format` | `log_format` | `INSPECT_LOG_FORMAT` |
 
-**Tip — one key, any model:** set `OPENROUTER_API_KEY` and use model ids like `openrouter/openai/gpt-4o` or `openrouter/anthropic/claude-3.5-sonnet`; switch models by changing just `--model` / `INSPECT_EVAL_MODEL`.
+**Tip — one key, any model:** set `OPENROUTER_API_KEY` and use model ids like `openrouter/openai/gpt-5.4` or `openrouter/anthropic/claude-opus-4.8`; switch models by changing just `--model` / `INSPECT_EVAL_MODEL`.
 
 Explicit flags always override `.env` / env values. Provider keys
 (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, …)
@@ -226,7 +226,7 @@ are read from the environment too. **Never commit `.env`.**
 
 ```bash
 inspect eval-set examples/01_hello/task.py examples/02_multiple_choice/task.py \
-  --model openai/gpt-4o-mini --log-dir logs/suite
+  --model openrouter/openai/gpt-5.4-mini --log-dir logs/suite
 ```
 
 Accepts all `inspect eval` options, plus it groups logs under one `--log-dir` and
@@ -287,36 +287,36 @@ inspect sandbox cleanup docker inspect-…-default-1   # remove one
 
 ```bash
 # fast smoke test — 5 samples, deterministic, cheap model
-inspect eval task.py --model openai/gpt-4o-mini --limit 5 --temperature 0
+inspect eval task.py --model openrouter/openai/gpt-5.4-mini --limit 5 --temperature 0
 
 # reliable measurement — repeat 5×, take pass@1, cap concurrency to dodge rate limits
-inspect eval task.py --model openai/gpt-4o --epochs 5 --epochs-reducer pass_at_1 \
+inspect eval task.py --model openrouter/openai/gpt-5.4 --epochs 5 --epochs-reducer pass_at_1 \
   --max-connections 20
 
 # vary the grader without touching code (model roles)
-inspect eval task.py --model openai/gpt-4o-mini --model-role grader=openai/gpt-4o
+inspect eval task.py --model openrouter/openai/gpt-5.4-mini --model-role grader=openrouter/openai/gpt-5.4
 
 # pass arguments into the @task function
 inspect eval task.py -T subset=hard -T shots=5
 
 # bound a long agentic run (limits + sandbox concurrency)
-inspect eval agent_task.py --model openai/gpt-4o \
+inspect eval agent_task.py --model openrouter/openai/gpt-5.4 \
   --message-limit 30 --token-limit 100000 --time-limit 300 --max-sandboxes 8
 
 # persist logs to S3 and view them from anywhere
-inspect eval task.py --model openai/gpt-4o --log-dir s3://my-evals/run-2026-06
+inspect eval task.py --model openrouter/openai/gpt-5.4 --log-dir s3://my-evals/run-2026-06
 inspect view --log-dir s3://my-evals/run-2026-06
 
 # generate now, grade later (cheap experiments with scorers)
-inspect eval task.py --model openai/gpt-4o --no-score
+inspect eval task.py --model openrouter/openai/gpt-5.4 --no-score
 inspect score logs/2026-…​.eval --scorer model_graded_qa
 
 # CI-friendly: no colours, no live UI, tolerate a few sample errors
-inspect eval task.py --model openai/gpt-4o-mini \
+inspect eval task.py --model openrouter/openai/gpt-5.4-mini \
   --display none --no-ansi --fail-on-error 0.1
 
 # run a whole suite with automatic retries
-inspect eval-set examples/ --model openai/gpt-4o-mini --log-dir logs/suite
+inspect eval-set examples/ --model openrouter/openai/gpt-5.4-mini --log-dir logs/suite
 ```
 
 In this repo, the [`scripts/`](../scripts/) helpers wrap these for you:

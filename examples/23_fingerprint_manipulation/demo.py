@@ -9,10 +9,10 @@ and writes results.json (consumed by report.html).
 
 Usage:
     # real proof (needs a vision model + key):
-    python demo.py --model openai/gpt-4o
+    python demo.py --model openrouter/openai/gpt-5.4
 
     # no-key mechanism demo — a SCRIPTED model that capitulates under pressure,
-    # to show the harness and the shape of the result (NOT evidence about gpt-4o):
+    # to show the harness and the shape of the result (NOT evidence about any specific model):
     python demo.py                      # defaults to mockllm/model
 """
 

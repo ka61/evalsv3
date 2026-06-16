@@ -74,7 +74,7 @@ cap CPU/memory, and disable networking for isolation.
 ## Run it
 
 ```bash
-inspect eval examples/04_sandbox_agent/task.py --model openai/gpt-4o-mini
+inspect eval examples/04_sandbox_agent/task.py --model openrouter/openai/gpt-5.4-mini
 docker ps          # watch the disposable sandbox while it runs
 inspect view
 ```
@@ -99,7 +99,7 @@ inspect view
 ## Debugging
 
 ```bash
-inspect eval examples/04_sandbox_agent/task.py --model openai/gpt-4o-mini --no-sandbox-cleanup
+inspect eval examples/04_sandbox_agent/task.py --model openrouter/openai/gpt-5.4-mini --no-sandbox-cleanup
 docker exec -it <container> bash -l      # poke around inside
 inspect sandbox cleanup docker           # remove leftovers when done
 ```

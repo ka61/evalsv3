@@ -10,7 +10,7 @@ A drop in the incentivized condition is sandbagging. Detection only; needs a
 vision-capable model. Group results by metadata.condition to compare.
 
 Run:
-    inspect eval examples/21_scheming_visual_sandbagging/task.py --model openai/gpt-4o
+    inspect eval examples/21_scheming_visual_sandbagging/task.py --model openrouter/openai/gpt-5.4
 """
 
 from pathlib import Path

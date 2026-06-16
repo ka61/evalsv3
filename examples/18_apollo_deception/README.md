@@ -53,7 +53,7 @@ scorer=model_graded_qa(
 ## Run it
 
 ```bash
-inspect eval examples/18_apollo_deception/task.py --model openai/gpt-4o-mini
+inspect eval examples/18_apollo_deception/task.py --model openrouter/openai/gpt-5.4-mini
 inspect view
 ```
 

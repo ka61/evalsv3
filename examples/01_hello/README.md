@@ -47,7 +47,7 @@ def hello():
 ## Run it
 
 ```bash
-inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini
+inspect eval examples/01_hello/task.py --model openrouter/openai/gpt-5.4-mini
 inspect view
 ```
 
@@ -70,7 +70,7 @@ can change it — see example 09).
 
 ## Try this next
 
-- swap the model: `--model anthropic/claude-sonnet-4-0`
+- swap the model: `--model openrouter/anthropic/claude-opus-4.8`
 - make grading stricter by editing the system message, or replace
   `model_graded_qa()` with `match()` (exact match) and see how the score changes
 - add your own `Sample`s

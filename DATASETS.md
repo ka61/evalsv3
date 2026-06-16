@@ -56,7 +56,7 @@ maps each raw record onto a `Sample`. Most public benchmarks fit this pattern.
 package already wraps 200+ benchmarks — run one directly:
 
 ```bash
-inspect eval inspect_evals/gsm8k --model openai/gpt-4o-mini --limit 20
+inspect eval inspect_evals/gsm8k --model openrouter/openai/gpt-5.4-mini --limit 20
 ```
 
 ## Popular evaluation datasets (reference)

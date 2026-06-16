@@ -50,7 +50,7 @@ def gsm8k_cot():
 ## Run it
 
 ```bash
-inspect eval examples/06_hf_dataset/task.py --model openai/gpt-4o-mini --limit 20
+inspect eval examples/06_hf_dataset/task.py --model openrouter/openai/gpt-5.4-mini --limit 20
 inspect view
 ```
 

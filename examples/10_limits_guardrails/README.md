@@ -31,7 +31,7 @@ The point is **how you run it**, with limits attached.
 ## Run it with limits
 
 ```bash
-inspect eval examples/10_limits_guardrails/task.py --model openai/gpt-4o-mini \
+inspect eval examples/10_limits_guardrails/task.py --model openrouter/openai/gpt-5.4-mini \
   --message-limit 8 --token-limit 50000 --time-limit 120 --working-limit 90
 ```
 

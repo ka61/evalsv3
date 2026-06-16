@@ -56,8 +56,8 @@ scorer=includes(),
 ## Run it — needs a vision model
 
 ```bash
-inspect eval examples/14_image_vqa/task.py --model openai/gpt-4o
-# also fine: anthropic/claude-sonnet-4-0, google/gemini-2.5-pro
+inspect eval examples/14_image_vqa/task.py --model openrouter/openai/gpt-5.4
+# also fine: openrouter/anthropic/claude-opus-4.8, openrouter/google/gemini-3.5-flash
 ```
 
 A text-only model will error or refuse — vision capability is required.

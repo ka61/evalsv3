@@ -32,7 +32,7 @@ Sandbagging shows up as **lower accuracy in `incentivized`**.
 ## Run it (needs a vision model)
 
 ```bash
-inspect eval examples/21_scheming_visual_sandbagging/task.py --model openai/gpt-4o
+inspect eval examples/21_scheming_visual_sandbagging/task.py --model openrouter/openai/gpt-5.4
 ```
 
 ## How to read the result
@@ -47,7 +47,7 @@ Group accuracy by `metadata.condition`:
 
 ```bash
 # needs a VISION model
-inspect eval examples/21_scheming_visual_sandbagging/task.py --model openai/gpt-4o
+inspect eval examples/21_scheming_visual_sandbagging/task.py --model openrouter/openai/gpt-5.4
 inspect view   # group accuracy by metadata.condition
 ```
 

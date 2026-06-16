@@ -76,13 +76,13 @@ Detection-only, harmless.
 source .venv/bin/activate
 
 # run an example (override the model as you like)
-inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini --limit 5
+inspect eval examples/01_hello/task.py --model openrouter/openai/gpt-5.4-mini --limit 5
 inspect view
 ```
 
 Most examples need only a model API key. Examples **04, 05, 10, 19, 22** also need
 **Docker** running. The **vision** examples (**14–16, 20–22**) need a
-vision-capable model (`--model openai/gpt-4o`). All keys come from the repo-root
+vision-capable model (`--model openrouter/openai/gpt-5.4`). All keys come from the repo-root
 `.env` (Inspect searches parent directories), so you don't need a `.env` per
 example.
 

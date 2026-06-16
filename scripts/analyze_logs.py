@@ -16,7 +16,7 @@ floating Contents/Top button). No third-party deps.
 
 Usage:
     python scripts/analyze_logs.py                       # ./logs -> logs/ANALYSIS.{md,html}
-    python scripts/analyze_logs.py logs --model openrouter/anthropic/claude-3.5-sonnet
+    python scripts/analyze_logs.py logs --model openrouter/anthropic/claude-opus-4.8
     python scripts/analyze_logs.py logs --reasoning-effort medium
     python scripts/analyze_logs.py logs --no-llm         # explanations + verdicts + stats only
     python scripts/analyze_logs.py logs --max-transcripts 0   # include EVERY sample
@@ -461,21 +461,27 @@ def transcript_html(tr):
     meta = " · ".join(f"{k}={v}" for k, v in tr["metadata"].items())
     sdisp = {"C": "C (correct)", "I": "I (incorrect)", "N": "N (no verdict / refused)"}.get(tr["score"], tr["score"] or "?")
     head = f"Sample {tr['idx']}" + (f" — {meta}" if meta else "") + f" — {sdisp}"
+    def _nl(s):  # escape, then turn every newline into <br> so nothing leaks a raw \n
+        return _esc(s).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+
     rows = []
     for m in tr["messages"]:
         role = _esc(m["role"])
-        txt = _esc(m["text"]).replace("\n", "<br>")
-        block = f'<div class="msg msg-{role.split(":")[0]}"><span class="role">{role}</span><div class="mtext">{txt}</div>'
+        block = f'<div class="msg msg-{role.split(":")[0]}"><span class="role">{role}</span><div class="mtext">{_nl(m["text"])}</div>'
         for c in m["calls"]:
-            block += f'<div class="call">↳ {_esc(c)}</div>'
+            block += f'<div class="call">↳ {_nl(c)}</div>'
         block += "</div>"
         rows.append(block)
     sc = (f'<div class="scorebox"><b>score:</b> {_esc(sdisp)}'
-          + (f' · <b>answer:</b> {_esc(tr["answer"])}' if tr["answer"] else "")
-          + (f'<br><b>judge note:</b> {_esc(tr["explanation"]).replace(chr(10), "<br>")}' if tr["explanation"] else "")
+          + (f' · <b>answer:</b> {_nl(tr["answer"])}' if tr["answer"] else "")
+          + (f'<br><b>judge note:</b> {_nl(tr["explanation"])}' if tr["explanation"] else "")
           + "</div>")
-    return (f'<details class="transcript"><summary>{_esc(head)}</summary>'
+    html = (f'<details class="transcript"><summary>{_esc(head)}</summary>'
             + "".join(rows) + sc + "</details>")
+    # belt-and-braces: the whole transcript must be ONE physical line so the
+    # Markdown renderer passes it through verbatim (otherwise </details> is lost
+    # and samples nest inside each other).
+    return html.replace("\r", "").replace("\n", "")
 
 
 # ======================================================================
@@ -494,74 +500,199 @@ def _group_table(name, vals):
     return out
 
 
+# ---- report layout helpers -------------------------------------------------
+
+# group examples into the same families used by the repo README
+CATEGORIES = [
+    ("foundations", "🧱 Foundations",
+        ["hello", "trivia_mc", "calculator", "find_flag", "fix_bug"]),
+    ("deeper", "🔬 Going deeper",
+        ["gsm8k_cot", "multi_scored", "reliability", "roles_demo",
+         "bounded_agent", "researcher", "reasoning_demo"]),
+    ("vision", "🖼️ Vision",
+        ["image_vqa", "chart_reading", "image_compare"]),
+    ("safety", "🛡️ AI-safety concepts (Apollo Research)",
+        ["sandbagging", "deception", "oversight_subversion"]),
+    ("scheming_img", "🕵️ Scheming with images",
+        ["eval_awareness", "visual_sandbagging", "visual_oversight_subversion"]),
+    ("manipulation", "🧠 Manipulation & chain-of-thought robustness",
+        ["fingerprint_manipulation"]),
+]
+_CAT_OF = {t: (k, lbl) for k, lbl, ts in CATEGORIES for t in ts}
+
+
+def _category(task):
+    return _CAT_OF.get(task, ("other", "📦 Other evaluations"))
+
+
+def _verdict_class(emoji):
+    return {"✅": "good", "⚠️": "warn", "❌": "bad"}.get(emoji, "neutral")
+
+
+def _howto_box(repo="git@github.com:ka61/evalsv3.git"):
+    """A single-line, colourful 'how this page was generated' info box."""
+    def cmd(*lines):
+        return ('<pre class="howto-cmd">'
+                + "<br>".join(_html.escape(x) for x in lines) + "</pre>")
+    return (
+        '<div class="howto">'
+        '<div class="howto-h">🛠️ How to generate this report yourself</div>'
+        '<ol class="howto-steps">'
+        '<li><span class="hk">Check out the repo &amp; install</span>'
+        + cmd(f"git clone {repo}", "cd evalsv3",
+              "python -m venv .venv && source .venv/bin/activate",
+              "pip install -r requirements.txt",
+              "cp .env.example .env      # then add your OPENROUTER_API_KEY")
+        + '</li>'
+        '<li><span class="hk">Run some evals</span> &mdash; logs are written to <code>logs/</code>'
+        + cmd("scripts/run_interactive.sh        # pick example + model + N (epochs)",
+              "# or run the whole suite:",
+              "scripts/run_all.sh                 # skips the Docker examples",
+              "scripts/run_all.sh --with-docker   # include the sandbox ones")
+        + '</li>'
+        '<li><span class="hk">Build this page</span> &mdash; reads <code>logs/</code>, writes '
+        '<code>ANALYSIS.md</code> + <code>ANALYSIS.html</code>'
+        + cmd("python scripts/analyze_logs.py",
+              "# faster, no model call (local stats + verdicts only):",
+              "python scripts/analyze_logs.py logs --no-llm")
+        + '</li>'
+        '</ol></div>'
+    ).replace("\n", "")
+
+
+def _summary_table(evals):
+    by_cat = {}
+    for e in evals:
+        key, label = _category(e["task"])
+        by_cat.setdefault(key, (label, []))[1].append(e)
+    order = [k for k, _, _ in CATEGORIES] + ["other"]
+    rows = []
+    for key in order:
+        if key not in by_cat:
+            continue
+        label, es = by_cat[key]
+        rows.append(f'<tr class="catrow"><td colspan="5">{_html.escape(label)}</td></tr>')
+        for e in es:
+            if "error" in e:
+                rows.append(f'<tr><td><b>{_html.escape(e["task"])}</b></td><td>&ndash;</td>'
+                            f'<td>&ndash;</td><td>&ndash;</td>'
+                            f'<td><span class="pill bad">⚠️ read error</span></td></tr>')
+                continue
+            acc = _primary_accuracy(e["metrics"])
+            emoji, vtext = verdict(e)
+            short = _html.escape(vtext.split(".**")[0].replace("**", "").strip())
+            cls = _verdict_class(emoji)
+            ex = _explainer(e["task"])
+            name = (f'<a href="#{_ex_anchor(e["task"])}"><b>{_html.escape(e["task"])}</b></a>'
+                    f'<span class="sub">{_html.escape(ex["title"])}</span>')
+            if acc is None:
+                accell = '<span class="sub">&mdash;</span>'
+            else:
+                pct = round(acc * 100)
+                accell = (f'<span class="accbar"><i class="{cls}" style="width:{pct}%"></i></span>'
+                          f'<span class="accnum">{pct}%</span>')
+            pill = f'<span class="pill {cls}">{emoji} {short}</span>'
+            rows.append(f'<tr><td>{name}</td><td><code>{_html.escape(e["model"])}</code></td>'
+                        f'<td class="num">{e["n_samples"]}</td><td>{accell}</td><td>{pill}</td></tr>')
+    return ('<table class="summary"><thead><tr><th>Test</th><th>Model</th><th>N</th>'
+            '<th>Accuracy</th><th>Verdict</th></tr></thead><tbody>'
+            + "".join(rows) + '</tbody></table>')
+
+
+def _one_eval_detail(e, L):
+    """Append one run's verdict + numbers + breakdowns + transcripts to L."""
+    emoji, vtext = verdict(e)
+    cls = _verdict_class(emoji)
+    callout = (f'<div class="verdict {cls}"><span class="vi">{emoji}</span>'
+               f'<div><b>Verdict.</b> {_inline(vtext)}</div></div>').replace("\n", "")
+    L += [callout, ""]
+    L.append("**The numbers:** model `" + e["model"] + f"`, {e['n_samples']} sample(s); "
+             + (", ".join(f"`{k}={v:.3f}`" if isinstance(v, float) else f"`{k}={v}`"
+                          for k, v in e["metrics"].items()) or "no metrics") + ".")
+    L.append("")
+    for gname in ("condition", "truth", "level", "condition x truth"):
+        if gname in e["groups"]:
+            L += _group_table(gname, e["groups"][gname])
+    if e.get("fp_diff"):
+        L += ["**On the genuinely *different* prints — what the model actually said "
+              "(a SAME here is a false match; refusals are kept separate):**", "",
+              "| condition | said SAME (false match) | said DIFFERENT (correct) | no verdict / refused | total |",
+              "|---|---|---|---|---|"]
+        for c in ("control", "mild", "strong", "extreme"):
+            d = e["fp_diff"].get(c)
+            if d:
+                L.append(f"| {c} | {d['same']} | {d['different']} | {d['none']} | {d['total']} |")
+        L.append("")
+    if e["transcripts"]:
+        shown = e["n_shown"]
+        extra = "" if shown >= e["n_samples"] else f" (showing first {shown} of {e['n_samples']})"
+        L += [f"**Full transcripts{extra}:**", ""]
+        for tr in e["transcripts"]:
+            L.append(transcript_html(tr))   # one raw-HTML line, passed through to HTML/MD
+        L.append("")
+
+
 def render_report(evals, llm_text, log_dir, model_name):
     stamp = _dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-    L = ["# Eval analysis", "", f"_Generated {stamp} from `{log_dir}/` — {len(evals)} log(s)._", "",
+    ok = [e for e in evals if "error" not in e]
+    L = ["# Eval analysis", "",
+         f"_Generated {stamp} from `{log_dir}/` — {len(evals)} log(s) across "
+         f"{len({e['task'] for e in ok})} test(s)._", "",
+         _howto_box(), "",
          "## How to read this report", "",
-         "Each **eval** runs a model on a set of questions or tasks and an automatic **scorer** marks every answer "
-         "**correct (C)** or **incorrect (I)**. The headline number is **accuracy** (share correct) with a "
-         "**standard error** (how shaky that number is — small runs are shaky).", "",
-         "Several examples are **AI-safety propensity tests**: they don't just ask *can* the model do something, but "
-         "*will* it misbehave when given a reason to. For those, the **verdict** box says in plain words whether the "
-         "behaviour (sandbagging, deception, scheming) actually showed up. Expand **Show full transcript** under any "
-         "sample to read the entire conversation. A full glossary is at the [end](#glossary).", ""]
+         "- An **eval** runs a model on a set of tasks; an automatic **scorer** marks each answer "
+         "**correct (C)** or **incorrect (I)** (some also record **N** — no answer / refused).",
+         "- The headline number is **accuracy** (share correct), reported with a **standard error** — "
+         "small runs are shaky, so treat tiny-sample numbers as indicative.",
+         "- Several examples are **AI-safety propensity tests**: not *can* the model misbehave, but "
+         "*will* it when given a reason. The coloured **Verdict** says, in plain words, whether the "
+         "behaviour (sandbagging, deception, scheming) actually showed up.",
+         "- Results are **grouped by test family** below. Expand any **Sample** to read the full "
+         "transcript. Technical terms link to the [glossary](#glossary).", ""]
+
+    # ---- summary first, right after the intro ----
+    L += ["## Results at a glance", "",
+          "One row per run, grouped by test family. Click a test name to jump to its detail.", "",
+          _summary_table(evals), ""]
 
     if llm_text:
-        L += ["## AI analyst summary", "", f"_Written by `{model_name}` (extended thinking)._", "", llm_text, "", "---", ""]
+        L += ["## AI analyst summary", "", f"_Written by `{model_name}` (extended thinking)._", "",
+              llm_text, "", "---", ""]
 
-    L += ["## Results at a glance", "", "| Example | Model | N | Accuracy | Verdict |", "|---|---|---|---|---|"]
-    for e in evals:
-        if "error" in e:
-            L.append(f"| {e['task']} | – | – | read-error | {e['error']} |"); continue
-        acc = _primary_accuracy(e["metrics"]); emoji, vtext = verdict(e)
-        short = vtext.split(".**")[0].replace("**", "").strip()
-        L.append(f"| [{e['task']}](#{_slug(e['task'])}) | {e['model']} | {e['n_samples']} | "
-                 f"{(f'{acc:.0%}' if acc is not None else '—')} | {emoji} {short} |")
-    L.append("")
-
-    for e in evals:
-        if "error" in e:
+    # ---- detailed sections, grouped by category then by test ----
+    by_cat = {}
+    for e in ok:
+        key, label = _category(e["task"])
+        by_cat.setdefault(key, (label, []))[1].append(e)
+    for key, label, _names in CATEGORIES + [("other", "📦 Other evaluations", [])]:
+        if key not in by_cat:
             continue
-        ex = _explainer(e["task"])
-        L += [f"## {e['task']} — {ex['title']}", "",
-              f"**What it's testing (plain English):** {ex['aim']}", "",
-              f"**More detail:** {ex['detail']}", "",
-              f"**How to read it:** {ex['read']}", ""]
-        emoji, vtext = verdict(e)
-        L += [f"> {emoji} **Verdict.** {vtext}", ""]
-        if ex["terms"]:
-            L += ["**The terms used here:**", ""]
-            for t in ex["terms"]:
-                if t in GLOSSARY:
-                    L.append(f"- {term_md(t)} — {GLOSSARY[t]}")
-            L.append("")
-        if e["task"] in SAFETY_REF:
-            _ref_name, _ref_url = SAFETY_REF[e["task"]]
-            L += [f"**Further reading (Apollo Research):** [{_ref_name}]({_ref_url}).", ""]
-        L.append("**The numbers:** model `" + e["model"] + f"`, {e['n_samples']} sample(s); "
-                 + (", ".join(f"`{k}={v:.3f}`" if isinstance(v, float) else f"`{k}={v}`"
-                              for k, v in e["metrics"].items()) or "no metrics") + ".")
-        L.append("")
-        for gname in ("condition", "truth", "level", "condition x truth"):
-            if gname in e["groups"]:
-                L += _group_table(gname, e["groups"][gname])
-        if e.get("fp_diff"):
-            L += ["**On the genuinely *different* prints — what the model actually said "
-                  "(a SAME here is a false match; refusals are kept separate):**", "",
-                  "| condition | said SAME (false match) | said DIFFERENT (correct) | no verdict / refused | total |",
-                  "|---|---|---|---|---|"]
-            for c in ("control", "mild", "strong", "extreme"):
-                d = e["fp_diff"].get(c)
-                if d:
-                    L.append(f"| {c} | {d['same']} | {d['different']} | {d['none']} | {d['total']} |")
-            L.append("")
-        if e["transcripts"]:
-            shown = e["n_shown"]
-            extra = "" if shown >= e["n_samples"] else f" (showing first {shown} of {e['n_samples']})"
-            L += [f"**Full transcripts{extra}:**", ""]
-            for tr in e["transcripts"]:
-                L.append(transcript_html(tr))   # one raw-HTML line, passed through to HTML/MD
-            L.append("")
+        clabel, es = by_cat[key]
+        L += [f"## {clabel} {{#cat-{key}}}", ""]
+        # group the runs in this category by test name (preserve first-seen order)
+        tests = {}
+        for e in es:
+            tests.setdefault(e["task"], []).append(e)
+        for task, runs in tests.items():
+            ex = _explainer(task)
+            L += [f"### {task} — {ex['title']} {{#{_ex_anchor(task)}}}", "",
+                  f"- **What it tests:** {ex['aim']}",
+                  f"- **In more detail:** {ex['detail']}",
+                  f"- **How to read it:** {ex['read']}", ""]
+            if ex["terms"]:
+                L += ["**Key terms:**", ""]
+                for t in ex["terms"]:
+                    if t in GLOSSARY:
+                        L.append(f"- {term_md(t)} — {GLOSSARY[t]}")
+                L.append("")
+            if task in SAFETY_REF:
+                _ref_name, _ref_url = SAFETY_REF[task]
+                L += [f"**Further reading (Apollo Research):** [{_ref_name}]({_ref_url}).", ""]
+            multi = len(runs) > 1
+            for e in runs:
+                if multi:
+                    L += [f"#### Run — `{e['model']}`", ""]
+                _one_eval_detail(e, L)
 
     L += ["## Glossary", "",
           "_Safety terms link to the relevant [Apollo Research](https://www.apolloresearch.ai/research) page._", ""]
@@ -629,6 +760,12 @@ def _slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or "section"
 
 
+def _ex_anchor(task):
+    # stable, unique per-example anchor (tasks are unique) used by the
+    # summary-table links and the matching section heading.
+    return "ex-" + _slug(task)
+
+
 def _inline(text):
     t = _html.escape(text, quote=False)
     t = re.sub(r"`([^`]+)`", r"<code>\1</code>", t)
@@ -677,7 +814,13 @@ def md_to_html_body(md):
         m = re.match(r"^(#{1,6})\s+(.*)$", line)
         if m:
             flush_para(); close_list()
-            lvl, text = len(m.group(1)), m.group(2); sid = _slug(text)
+            lvl, text = len(m.group(1)), m.group(2)
+            # optional explicit anchor:  ## Heading {#my-id}
+            explicit = re.search(r"\s*\{#([\w-]+)\}\s*$", text)
+            if explicit:
+                sid = explicit.group(1); text = text[:explicit.start()].rstrip()
+            else:
+                sid = _slug(text)
             if sid in seen:
                 seen[sid] += 1; sid = f"{sid}-{seen[sid]}"
             else:
@@ -744,7 +887,41 @@ nav.toc li{{margin:4px 0}} nav.toc a{{text-decoration:none}}
        background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:22px;padding:9px 13px;
        box-shadow:0 6px 20px -12px rgba(17,32,46,.55)}}
 .fab a:hover{{border-color:var(--accent);color:var(--accent)}}
-@media(max-width:760px){{nav.toc ol{{columns:1}}}}
+h3{{border-left:3px solid var(--accent);padding-left:10px;margin-top:26px}}
+h4{{font-family:'Space Grotesk',Inter,sans-serif;font-size:14px;margin:18px 0 4px;color:var(--muted)}}
+/* how-to infobox */
+.howto{{background:linear-gradient(135deg,#eaf6f3 0%,#eaf1fb 100%);border:1px solid #cfe0ea;
+       border-left:5px solid var(--accent);border-radius:12px;padding:16px 20px 18px;margin:18px 0 8px}}
+.howto-h{{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;margin-bottom:6px;color:#0c7e70}}
+.howto-steps{{margin:0;padding-left:22px}} .howto-steps>li{{margin:10px 0}}
+.howto .hk{{font-weight:600}} .howto code{{background:#dbe8f0;color:#0c7e70}}
+pre.howto-cmd{{margin:7px 0 0;background:#0f2535;color:#dbe9f4;border:none;border-radius:8px;
+              padding:10px 13px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.55;overflow-x:auto}}
+/* summary table */
+table.summary{{font-size:13.5px}} table.summary td{{vertical-align:middle}}
+table.summary td.num{{text-align:center;font-variant-numeric:tabular-nums}}
+tr.catrow td{{background:#e7edf3;font-family:'Space Grotesk',sans-serif;font-weight:600;
+             font-size:12.5px;color:#34506a;letter-spacing:.02em;padding-top:10px;padding-bottom:10px}}
+table.summary .sub{{display:block;color:var(--muted);font-size:11.5px;font-weight:400;margin-top:1px}}
+.accbar{{display:inline-block;width:62px;height:8px;background:#e3e9ef;border-radius:5px;
+        overflow:hidden;vertical-align:middle;margin-right:7px}}
+.accbar>i{{display:block;height:100%;background:#4763d0}}
+.accbar>i.good{{background:#1f9d57}} .accbar>i.warn{{background:#d9a017}} .accbar>i.bad{{background:#cf3d3d}}
+.accnum{{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted)}}
+.pill{{display:inline-block;font-size:11.5px;line-height:1.4;padding:3px 9px;border-radius:20px;border:1px solid}}
+.pill.good{{background:#e7f6ec;border-color:#bfe6cd;color:#1f7a45}}
+.pill.warn{{background:#fdf3da;border-color:#f0dca0;color:#8a6206}}
+.pill.bad{{background:#fbe9e9;border-color:#f0c4c4;color:#b23232}}
+.pill.neutral{{background:#eef2f6;border-color:#d7dfe7;color:#566576}}
+/* verdict callout */
+.verdict{{display:flex;gap:10px;align-items:flex-start;margin:12px 0;padding:11px 14px;
+         border-radius:10px;border:1px solid;font-size:14.5px}}
+.verdict .vi{{font-size:18px;line-height:1.25}}
+.verdict.good{{background:#e7f6ec;border-color:#bfe6cd}}
+.verdict.warn{{background:#fdf3da;border-color:#f0dca0}}
+.verdict.bad{{background:#fbe9e9;border-color:#f0c4c4}}
+.verdict.neutral{{background:#eef2f6;border-color:#d7dfe7}}
+@media(max-width:760px){{nav.toc ol{{columns:1}} .accbar{{display:none}}}}
 </style></head><body id="top"><div class="wrap">
 {body}
 <div style="margin-top:40px;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace">

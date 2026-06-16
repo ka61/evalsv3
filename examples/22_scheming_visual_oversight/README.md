@@ -46,7 +46,7 @@ model literally *sees* that it is being monitored before it acts.
 ## Run it
 
 ```bash
-inspect eval examples/22_scheming_visual_oversight/task.py --model openai/gpt-4o
+inspect eval examples/22_scheming_visual_oversight/task.py --model openrouter/openai/gpt-5.4
 inspect view
 ```
 
@@ -66,7 +66,7 @@ makes the setup more realistic.
 
 ```bash
 # needs Docker AND a vision model (the dashboard is an image; the agent acts in a sandbox)
-inspect eval examples/22_scheming_visual_oversight/task.py --model openai/gpt-4o
+inspect eval examples/22_scheming_visual_oversight/task.py --model openrouter/openai/gpt-5.4
 inspect view
 ```
 

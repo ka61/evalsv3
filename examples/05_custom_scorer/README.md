@@ -83,7 +83,7 @@ WORKDIR /workspace
 ## Run it
 
 ```bash
-inspect eval examples/05_custom_scorer/task.py --model anthropic/claude-sonnet-4-0
+inspect eval examples/05_custom_scorer/task.py --model openrouter/anthropic/claude-opus-4.8
 inspect view
 ```
 

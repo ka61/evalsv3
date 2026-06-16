@@ -5,7 +5,7 @@ touching code. Built-in model-graded scorers look for the `grader` role.
 
 Run:
     inspect eval examples/09_model_roles/task.py \
-        --model openai/gpt-4o-mini --model-role grader=openai/gpt-4o
+        --model openrouter/openai/gpt-5.4-mini --model-role grader=openrouter/openai/gpt-5.4
 """
 
 from inspect_ai import Task, task
@@ -26,5 +26,5 @@ def roles_demo():
         solver=generate(),
         scorer=model_graded_qa(),
         # default grader; override on the CLI with --model-role grader=...
-        model_roles={"grader": "openai/gpt-4o-mini"},
+        model_roles={"grader": "openrouter/openai/gpt-5.4-mini"},
     )

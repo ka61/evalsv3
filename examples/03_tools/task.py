@@ -8,7 +8,7 @@ Concepts: the `@tool` decorator, typed args + docstring as the tool schema,
 `use_tools`, and numeric `match` scoring.
 
 Run:
-    inspect eval examples/03_tools/task.py --model openai/gpt-4o-mini
+    inspect eval examples/03_tools/task.py --model openrouter/openai/gpt-5.4-mini
 """
 
 from inspect_ai import Task, task

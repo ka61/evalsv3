@@ -5,9 +5,9 @@ Two ways to spend more "thinking" for a better answer:
   2. self_critique — the model critiques and revises its own first answer.
 
 Run:
-    inspect eval examples/12_reasoning_cot/task.py --model openai/gpt-4o-mini
+    inspect eval examples/12_reasoning_cot/task.py --model openrouter/openai/gpt-5.4-mini
     # with a reasoning model:
-    # inspect eval examples/12_reasoning_cot/task.py --model openai/o4-mini --reasoning-effort high
+    # inspect eval examples/12_reasoning_cot/task.py --model openrouter/openai/gpt-5.5 --reasoning-effort high
 """
 
 from inspect_ai import Task, task

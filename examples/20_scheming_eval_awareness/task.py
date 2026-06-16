@@ -10,7 +10,7 @@ Detection only — we measure whether the model can tell it is being tested.
 Needs a vision-capable model.
 
 Run:
-    inspect eval examples/20_scheming_eval_awareness/task.py --model openai/gpt-4o
+    inspect eval examples/20_scheming_eval_awareness/task.py --model openrouter/openai/gpt-5.4
 """
 
 from pathlib import Path

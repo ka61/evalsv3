@@ -3,7 +3,7 @@
 Ask a vision model to read a simple bar chart and identify the tallest bar.
 
 Run:
-    inspect eval examples/15_image_chart/task.py --model openai/gpt-4o
+    inspect eval examples/15_image_chart/task.py --model openrouter/openai/gpt-5.4
 """
 
 from pathlib import Path

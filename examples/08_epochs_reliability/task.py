@@ -4,7 +4,7 @@ Run each sample multiple times and reduce the repeats into one score. Essential
 for stochastic tasks where a single run is noisy.
 
 Run:
-    inspect eval examples/08_epochs_reliability/task.py --model openai/gpt-4o-mini --epochs 5
+    inspect eval examples/08_epochs_reliability/task.py --model openrouter/openai/gpt-5.4-mini --epochs 5
 """
 
 from inspect_ai import Epochs, Task, task

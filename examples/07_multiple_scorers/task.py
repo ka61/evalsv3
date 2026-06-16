@@ -5,7 +5,7 @@ runs alongside a model-graded check; Inspect reports both, each with accuracy an
 a standard error.
 
 Run:
-    inspect eval examples/07_multiple_scorers/task.py --model openai/gpt-4o-mini
+    inspect eval examples/07_multiple_scorers/task.py --model openrouter/openai/gpt-5.4-mini
 """
 
 from inspect_ai import Task, task

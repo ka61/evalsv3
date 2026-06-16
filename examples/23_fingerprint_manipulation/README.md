@@ -66,10 +66,10 @@ with `VERDICT: SAME` or `VERDICT: DIFFERENT`; a small custom scorer
 
 ```bash
 # real proof (needs a vision model + key)
-python examples/23_fingerprint_manipulation/demo.py --model openai/gpt-4o
+python examples/23_fingerprint_manipulation/demo.py --model openrouter/openai/gpt-5.4
 
 # no key? a SCRIPTED stand-in that capitulates under pressure, to show the
-# harness and the shape of the result (illustrative, NOT gpt-4o evidence)
+# harness and the shape of the result (illustrative, NOT real-model evidence)
 python examples/23_fingerprint_manipulation/demo.py
 ```
 
@@ -103,17 +103,17 @@ experts disagreed.
 
 ```bash
 # 0. one-time setup (from the repo root): venv + install + a key in .env
-#    examples 23 needs a VISION model (gpt-4o, claude-sonnet-4-0, gemini-2.5-pro)
+#    example 23 needs a VISION model (openrouter/openai/gpt-5.4, openrouter/anthropic/claude-opus-4.8, openrouter/qwen/qwen3.6-flash)
 
 # 1. the full eval (44 samples = 11 pairs × 4 pressure levels)
-inspect eval examples/23_fingerprint_manipulation/task.py --model openai/gpt-4o
+inspect eval examples/23_fingerprint_manipulation/task.py --model openrouter/openai/gpt-5.4
 inspect view                       # group by metadata.condition and metadata.truth
 
 # 2. average out noise with repeats
-inspect eval examples/23_fingerprint_manipulation/task.py --model openai/gpt-4o -T epochs=5
+inspect eval examples/23_fingerprint_manipulation/task.py --model openrouter/openai/gpt-5.4 -T epochs=5
 
 # 3. the proof harness — prints the before/after flip table + writes results.json
-python examples/23_fingerprint_manipulation/demo.py --model openai/gpt-4o
+python examples/23_fingerprint_manipulation/demo.py --model openrouter/openai/gpt-5.4
 
 # 4. no API key? a SCRIPTED stand-in shows the harness + result shape
 #    (illustrative ONLY — not evidence about any real model)
@@ -123,11 +123,11 @@ python examples/23_fingerprint_manipulation/demo.py
 ## Run the full eval
 
 ```bash
-inspect eval examples/23_fingerprint_manipulation/task.py --model openai/gpt-4o
+inspect eval examples/23_fingerprint_manipulation/task.py --model openrouter/openai/gpt-5.4
 inspect view     # group by metadata.condition and metadata.truth
 
 # average out noise with repeats:
-inspect eval examples/23_fingerprint_manipulation/task.py --model openai/gpt-4o -T epochs=5
+inspect eval examples/23_fingerprint_manipulation/task.py --model openrouter/openai/gpt-5.4 -T epochs=5
 ```
 
 ## How to read the result
@@ -204,7 +204,7 @@ correct "different".
 
 ## Try this next
 
-- run with a reasoning model (`--model openai/o4-mini --reasoning-effort high`):
+- run with a reasoning model (`--model openrouter/openai/gpt-5.5 --reasoning-effort high`):
   does explicit reasoning resist the pressure or rationalise it faster?
 - add `self_critique()` (example 12) and check whether self-review undoes the flip
 - flip the manipulation to push toward **DIFFERENT** on the genuine `same` pairs —

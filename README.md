@@ -24,12 +24,12 @@ pip install -r requirements.txt
 cp .env.example .env        # then edit .env
 
 # 5. run your first eval
-inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini --limit 5
+inspect eval examples/01_hello/task.py --model openrouter/openai/gpt-5.4-mini --limit 5
 inspect view                # browse the .eval log in your browser
 ```
 
 Requires **Python ≥ 3.10**. Examples **04, 05, 10, 19, 22** also need **Docker**;
-the vision examples (**14–16, 20–22**) need a vision-capable model (e.g. `gpt-4o`).
+the vision examples (**14–16, 20–22**) need a vision-capable model (e.g. `gpt-5.4`).
 
 ## Open it in VS Code
 
@@ -168,21 +168,21 @@ editing a single line (or `--model`):
 ```bash
 # .env
 OPENROUTER_API_KEY=sk-or-...
-INSPECT_EVAL_MODEL=openrouter/openai/gpt-4o-mini   # change this to switch everywhere
+INSPECT_EVAL_MODEL=openrouter/openai/gpt-5.4-mini   # change this to switch everywhere
 ```
 
 Use any [OpenRouter model](https://openrouter.ai/models) as `openrouter/<id>`:
 
-- `openrouter/openai/gpt-4o` · `openrouter/openai/gpt-5.5` (vision-capable — needed for examples 14–16, 20–22)
-- `openrouter/anthropic/claude-3.5-sonnet`
-- `openrouter/google/gemini-2.5-pro` · `openrouter/deepseek/deepseek-chat`
+- `openrouter/openai/gpt-5.4` · `openrouter/openai/gpt-5.5` (vision-capable — needed for examples 14–16, 20–22)
+- `openrouter/anthropic/claude-opus-4.8`
+- `openrouter/google/gemini-3.5-flash` · `openrouter/qwen/qwen3.6-flash`
 
-Per-run override: `inspect eval task.py --model openrouter/anthropic/claude-3.5-sonnet`
-or `scripts/run_example.sh 17 --model openrouter/google/gemini-2.5-pro`.
+Per-run override: `inspect eval task.py --model openrouter/anthropic/claude-opus-4.8`
+or `scripts/run_example.sh 17 --model openrouter/google/gemini-3.5-flash`.
 
 **Prefer native provider keys instead?** Set `OPENAI_API_KEY` /
 `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` in `.env` and use plain ids
-(`openai/gpt-4o`, `anthropic/claude-sonnet-4-0`, …); self-host with
+(`openai/gpt-5.4`, `anthropic/claude-opus-4.8`, …); self-host with
 `vllm/<hf-model>`. The report writer `scripts/analyze_logs.py` defaults to
 `openrouter/openai/gpt-5.5` (override with `--model`).
 
@@ -192,30 +192,34 @@ A starting menu of OpenRouter model ids — set one as `INSPECT_EVAL_MODEL` in
 `.env` or pass `--model`. Exact ids and prices change, so browse
 [openrouter.ai/models](https://openrouter.ai/models) for the current list.
 
+The ids below were checked against the live OpenRouter catalog, but slugs and
+prices move quickly — always confirm an id at
+[openrouter.ai/models](https://openrouter.ai/models) before relying on it.
+
 | Model (`--model`) | Input | Good for |
 |---|---|---|
-| `openrouter/openai/gpt-4o-mini` | text + image (multimodal) | cheap default — runs every example, incl. vision |
-| `openrouter/openai/gpt-4o` | text + image (multimodal) | stronger general + vision |
+| `openrouter/openai/gpt-5.4-mini` | text + image (multimodal) | cheap default — runs every example, incl. vision |
+| `openrouter/openai/gpt-5.4` | text + image (multimodal) | strong general + vision |
 | `openrouter/openai/gpt-5.5` | text + image, reasoning | frontier; the analysis-report default analyst |
-| `openrouter/anthropic/claude-3.5-sonnet` | text + image (multimodal) | strong coding & agentic (examples 04, 05) |
-| `openrouter/google/gemini-2.5-pro` | text + image, long context | reasoning + very large context |
-| `openrouter/google/gemini-2.5-flash` | text + image (multimodal) | fast, cheap multimodal |
-| `openrouter/deepseek/deepseek-chat` | text only | low-cost general (text-only examples) |
-| `openrouter/deepseek/deepseek-r1` | text, reasoning | cheap chain-of-thought (example 12) |
-| `openrouter/meta-llama/llama-3.3-70b-instruct` | text only | open-weight, text-only |
-| `openrouter/qwen/qwen2.5-vl-72b-instruct` | text + image (multimodal) | open-weight vision (Qwen-VL) — good for image inputs |
-| `openrouter/meta-llama/llama-3.2-90b-vision-instruct` | text + image (multimodal) | open-weight vision (Llama) |
-| `openrouter/mistralai/pixtral-large-2411` | text + image (multimodal) | open-weight vision (Pixtral) |
-| `openrouter/x-ai/grok-2-vision-1212` | text + image (multimodal) | vision (Grok) |
+| `openrouter/anthropic/claude-opus-4.8` | text + image (multimodal) | strong coding & agentic (examples 04, 05) |
+| `openrouter/google/gemini-3.5-flash` | text + image + video | fast, cheap multimodal, huge context |
+| `openrouter/x-ai/grok-4.3` | text + image (multimodal) | reasoning + vision |
+| `openrouter/qwen/qwen3.6-flash` | text + image + video | open-weight vision (Qwen) — **good for image inputs** |
+| `openrouter/qwen/qwen3.6-27b` | text + image + video | open-weight vision (Qwen), dense 27B |
+| `openrouter/qwen/qwen3.5-9b` | text + image + video | small open-weight vision (cheapest image option) |
+| `openrouter/google/gemma-4-31b-it` | text + image (multimodal) | open-weight vision (Gemma) |
+| `openrouter/mistralai/mistral-small-2603` | text + image (multimodal) | open-weight vision (Mistral Small 4) |
+| `openrouter/deepseek/deepseek-v4-flash` | text only | low-cost general (text-only examples) |
+| `openrouter/qwen/qwen3.7-max` | text only | flagship reasoning (text only) |
 
 > **Pick by capability:** the vision examples (14–16, 20–22) need a **text + image**
-> model — text-only ones will error there. The reasoning example (12) shines with a
-> **reasoning** model (e.g. `…/gpt-5.5`, `…/deepseek-r1`, `…/gemini-2.5-pro`).
+> model — text-only ones (`…/deepseek-v4-flash`, `…/qwen3.7-max`) will error there.
+> For image inputs the Qwen 3.6 / 3.5 vision models are a strong open-weight pick.
 > Agentic/sandbox examples (04, 05, 10, 19, 22) run on any model but benefit from
-> strong tool-use models.
+> strong tool-use models (`…/gpt-5.5`, `…/claude-opus-4.8`).
 
 Prefer not to use OpenRouter? Drop the `openrouter/` prefix and set the matching
-native key (e.g. `--model openai/gpt-4o` with `OPENAI_API_KEY`).
+native key (e.g. `--model openai/gpt-5.4` with `OPENAI_API_KEY`).
 
 ## Contributing & the paved path
 

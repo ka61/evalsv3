@@ -45,10 +45,10 @@ def reasoning_demo():
 
 ```bash
 # ordinary model with CoT + self-critique
-inspect eval examples/12_reasoning_cot/task.py --model openai/gpt-4o-mini
+inspect eval examples/12_reasoning_cot/task.py --model openrouter/openai/gpt-5.4-mini
 
 # a reasoning model (emits a separate reasoning trace)
-inspect eval examples/12_reasoning_cot/task.py --model openai/o4-mini --reasoning-effort high
+inspect eval examples/12_reasoning_cot/task.py --model openrouter/openai/gpt-5.5 --reasoning-effort high
 ```
 
 `--reasoning-effort` (values like `low|medium|high`) trades tokens/cost for more

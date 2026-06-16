@@ -80,7 +80,7 @@ The agent has `bash` + `text_editor` and runs with `sandbox="docker"`.
 ## Run it
 
 ```bash
-inspect eval examples/19_apollo_scheming_oversight/task.py --model openai/gpt-4o
+inspect eval examples/19_apollo_scheming_oversight/task.py --model openrouter/openai/gpt-5.4
 inspect view
 ```
 

@@ -56,7 +56,7 @@ Task(
 ## Run it
 
 ```bash
-inspect eval examples/03_tools/task.py --model openai/gpt-4o-mini
+inspect eval examples/03_tools/task.py --model openrouter/openai/gpt-5.4-mini
 ```
 
 ## What happens, step by step

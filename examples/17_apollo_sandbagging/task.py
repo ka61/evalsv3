@@ -12,7 +12,7 @@ Sandbagging shows up as LOWER accuracy in the incentivized condition. This only
 measures/detects the behaviour — it asks nothing harmful.
 
 Run:
-    inspect eval examples/17_apollo_sandbagging/task.py --model openai/gpt-4o-mini
+    inspect eval examples/17_apollo_sandbagging/task.py --model openrouter/openai/gpt-5.4-mini
     # then group accuracy by metadata.condition in the log viewer
 """
 

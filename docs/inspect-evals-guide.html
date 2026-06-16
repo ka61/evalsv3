@@ -184,7 +184,7 @@ footer b{color:var(--ink);}
     <div class="step"><h4>Install the package</h4><p><code>pip install inspect-ai</code> (plus a provider SDK, e.g. <code>pip install openai</code> or <code>anthropic</code>).</p></div>
     <div class="step"><h4>Set your API key</h4><p>Export the provider key, e.g. <code>export OPENAI_API_KEY=sk-…</code> — Inspect reads provider keys from the environment.</p></div>
     <div class="step"><h4>Write a task</h4><p>A <code>.py</code> file with a <code>@task</code> function returning a <code>Task</code>.</p></div>
-    <div class="step"><h4>Run it</h4><p><code>inspect eval task.py --model openai/gpt-4o</code> — runs the dataset and writes a log.</p></div>
+    <div class="step"><h4>Run it</h4><p><code>inspect eval task.py --model openrouter/openai/gpt-5.4</code> — runs the dataset and writes a log.</p></div>
     <div class="step"><h4>View results</h4><p><code>inspect view</code> opens the interactive log viewer in your browser.</p></div>
   </div>
   <p class="filename">A minimal project — <b>capitals/</b></p>
@@ -205,8 +205,8 @@ footer b{color:var(--ink);}
         scorer=model_graded_fact(),
     )</pre>
   <pre><span class="c"># run from the shell</span>
-inspect eval capitals/task.py <span class="a">--model</span> openai/gpt-4o
-inspect eval capitals/task.py <span class="a">--model</span> anthropic/claude-sonnet-4-0 <span class="a">--limit</span> 10
+inspect eval capitals/task.py <span class="a">--model</span> openrouter/openai/gpt-5.4
+inspect eval capitals/task.py <span class="a">--model</span> openrouter/anthropic/claude-opus-4.8 <span class="a">--limit</span> 10
 inspect view   <span class="c"># browse the .eval logs</span></pre>
   <div class="callout"><span class="label">Project layout —</span> keep tasks, any datasets, and (for agentic evals) a <code>Dockerfile</code>/<code>compose.yaml</code> together in one directory. Logs land in <code>./logs</code> by default, configurable via <code>INSPECT_LOG_DIR</code>.</div>
 </div></section>
@@ -501,9 +501,9 @@ Task(
     <tr><td><b>Anything else</b></td><td><code>openai-api/</code> (any OpenAI-compatible endpoint) · <code>openrouter/</code></td></tr>
   </table>
   </div>
-  <p style="font-size:12.5px;color:var(--muted);margin-top:8px;">Examples: <code>openai/gpt-4o-mini</code>, <code>anthropic/claude-sonnet-4-0</code>, <code>google/gemini-2.5-pro</code>, <code>vllm/meta-llama/Llama-3.1-8B-Instruct</code>. Set a default with <code>INSPECT_EVAL_MODEL</code>, or pass <code>--model none</code> for evals that call models internally.</p>
+  <p style="font-size:12.5px;color:var(--muted);margin-top:8px;">Examples: <code>openrouter/openai/gpt-5.4-mini</code>, <code>openrouter/anthropic/claude-opus-4.8</code>, <code>openrouter/google/gemini-3.5-flash</code>, <code>vllm/meta-llama/Llama-3.1-8B-Instruct</code>. Set a default with <code>INSPECT_EVAL_MODEL</code>, or pass <code>--model none</code> for evals that call models internally.</p>
   <pre><span class="c"># generation config &amp; connection limits</span>
-inspect eval task.py <span class="a">--model</span> anthropic/claude-sonnet-4-0 \
+inspect eval task.py <span class="a">--model</span> openrouter/anthropic/claude-opus-4.8 \
   <span class="a">--temperature</span> 0.0 <span class="a">--max-tokens</span> 2048 \
   <span class="a">--max-connections</span> 20      <span class="c"># parallel requests to the provider</span>
 
@@ -513,11 +513,11 @@ inspect eval task.py <span class="a">--model</span> vllm/meta-llama/Llama-3.1-8B
   <h3>Model roles — name the models in your eval</h3>
   <p>Rather than hard-coding model names, give them <b class="kw">roles</b> (e.g. <code>grader</code>, <code>red_team</code>, <code>blue_team</code>) and bind real models at run time. Built-in model-graded scorers look for the <code>grader</code> role by default, so you can swap the grader without touching code.</p>
   <pre><span class="c"># in the task, or override on the CLI / in eval()</span>
-Task(..., model_roles={<span class="s">"grader"</span>: <span class="s">"openai/gpt-4o"</span>})
+Task(..., model_roles={<span class="s">"grader"</span>: <span class="s">"openrouter/openai/gpt-5.4"</span>})
 
 <span class="c"># CLI: vary the grader (or red/blue teams) per run</span>
-inspect eval math.py <span class="a">--model</span> anthropic/claude-sonnet-4-0 \
-  <span class="a">--model-role</span> grader=google/gemini-2.5-pro</pre>
+inspect eval math.py <span class="a">--model</span> openrouter/anthropic/claude-opus-4.8 \
+  <span class="a">--model-role</span> grader=openrouter/google/gemini-3.5-flash</pre>
 
   <h3>GPU sizing when you self-host the model</h3>
   <p class="sec-intro" style="margin-bottom:14px;">If the eval drives an open-weight model you serve yourself, you need enough GPU memory for the weights plus the KV cache. Rough guidance (BF16 ≈ 2 GB per billion params; quantization roughly halves it):</p>
@@ -712,7 +712,7 @@ inspect score logs/2026-...eval  <span class="a">--scorer</span> model_graded_qa
   <pre><span class="c"># .env</span>
 <span class="a">OPENAI_API_KEY</span>=sk-...
 <span class="a">ANTHROPIC_API_KEY</span>=sk-ant-...
-<span class="a">INSPECT_EVAL_MODEL</span>=openai/gpt-4o      <span class="c"># default --model</span>
+<span class="a">INSPECT_EVAL_MODEL</span>=openrouter/openai/gpt-5.4      <span class="c"># default --model</span>
 <span class="a">INSPECT_LOG_DIR</span>=./logs                  <span class="c"># where .eval logs land</span>
 <span class="a">INSPECT_LOG_LEVEL</span>=info</pre>
   <pre><span class="c"># verify everything end to end</span>
@@ -822,11 +822,11 @@ inspect view                                 <span class="c"># browse the result
 mkdir myeval &amp;&amp; cd myeval
 <span class="c"># ... add task.py, Dockerfile, compose.yaml ...</span>
 docker compose build                         <span class="c"># optional: build ahead of time</span>
-inspect eval task.py <span class="a">--model</span> openai/gpt-4o <span class="a">--limit</span> 5
+inspect eval task.py <span class="a">--model</span> openrouter/openai/gpt-5.4 <span class="a">--limit</span> 5
 docker ps                                     <span class="c"># see sandboxes while running</span>
 inspect view</pre>
   <pre><span class="c"># control concurrency &amp; sandbox behaviour</span>
-inspect eval task.py <span class="a">--model</span> openai/gpt-4o \
+inspect eval task.py <span class="a">--model</span> openrouter/openai/gpt-5.4 \
   <span class="a">--max-sandboxes</span> 8       <span class="c"># cap simultaneous containers</span> \
   <span class="a">--max-connections</span> 10    <span class="c"># cap model API parallelism</span> \
   <span class="a">--epochs</span> 3              <span class="c"># repeat each sample</span></pre>
@@ -885,7 +885,7 @@ inspect eval task.py <span class="a">--model</span> openai/gpt-4o \
   </div>
   <pre><span class="c"># on the VM — run and persist logs to S3</span>
 export INSPECT_LOG_DIR=s3://my-evals-bucket/run-2026-06
-inspect eval task.py <span class="a">--model</span> anthropic/claude-sonnet-4-0 \
+inspect eval task.py <span class="a">--model</span> openrouter/anthropic/claude-opus-4.8 \
   <span class="a">--max-connections</span> 30 <span class="a">--max-sandboxes</span> 16
 <span class="c"># from your laptop, browse them:</span>
 inspect view <span class="a">--log-dir</span> s3://my-evals-bucket/run-2026-06</pre>
@@ -898,7 +898,7 @@ pip install inspect-k8s-sandbox
 <span class="c"># task.py</span>
 Task(..., sandbox=<span class="s">"k8s"</span>)            <span class="c"># or sandbox=("k8s", "values.yaml")</span>
 <span class="c"># run against your configured cluster</span>
-inspect eval task.py <span class="a">--model</span> openai/gpt-4o <span class="a">--max-sandboxes</span> 200</pre>
+inspect eval task.py <span class="a">--model</span> openrouter/openai/gpt-5.4 <span class="a">--max-sandboxes</span> 200</pre>
 
   <h3>Path 3 — a managed platform</h3>
   <p>If you'd rather not operate Kubernetes, platforms like METR's <b class="kw">Hawk</b> run Inspect evals on cloud infrastructure from a YAML config — provisioning isolated pods, managing model credentials, streaming logs, storing results in a database, and serving a browse UI. This is the turnkey end of the spectrum (and conceptually what the Inspect Control Plane in the companion spec builds in-house).</p>
@@ -933,7 +933,7 @@ inspect eval task.py <span class="a">--model</span> openai/gpt-4o <span class="a
 Task(
     dataset=json_dataset(<span class="s">"qa.jsonl"</span>),
     solver=[system_message(<span class="s">"Answer concisely and accurately."</span>), generate()],
-    scorer=model_graded_qa(model=<span class="s">"openai/gpt-4o"</span>),   <span class="c"># a grader model</span>
+    scorer=model_graded_qa(model=<span class="s">"openrouter/openai/gpt-5.4"</span>),   <span class="c"># a grader model</span>
 )</pre>
 
   <h3>Tool-using agent with web search</h3>
@@ -962,13 +962,13 @@ Task(dataset=ds, solver=..., scorer=..., epochs=Epochs(5, <span class="s">"pass_
     <span class="k">return</span> Task(dataset=load(subset, shots), solver=generate(), scorer=match())
 
 <span class="c"># pass args at the command line</span>
-<span class="c"># inspect eval task.py -T subset=hard -T shots=5 --model openai/gpt-4o</span></pre>
+<span class="c"># inspect eval task.py -T subset=hard -T shots=5 --model openrouter/openai/gpt-5.4</span></pre>
 
   <h3>Run a whole suite as an eval-set</h3>
   <pre><span class="c"># run many tasks together, with automatic retry of failures</span>
-inspect eval-set tasks/ <span class="a">--model</span> openai/gpt-4o <span class="a">--log-dir</span> ./logs/suite
+inspect eval-set tasks/ <span class="a">--model</span> openrouter/openai/gpt-5.4 <span class="a">--log-dir</span> ./logs/suite
 <span class="c"># run several built-in evals at once</span>
-inspect eval-set inspect_evals/gsm8k inspect_evals/mmlu <span class="a">--model</span> openai/gpt-4o</pre>
+inspect eval-set inspect_evals/gsm8k inspect_evals/mmlu <span class="a">--model</span> openrouter/openai/gpt-5.4</pre>
 
   <h3>Custom scorer that runs a unit test in the sandbox</h3>
   <pre><span class="a">@scorer</span>(metrics=[accuracy(), stderr()])
@@ -1064,7 +1064,7 @@ inspect eval-set inspect_evals/gsm8k inspect_evals/mmlu <span class="a">--model<
 <span class="k">RUN</span> pip install --no-cache-dir pytest
 <span class="k">WORKDIR</span> /workspace</pre>
   <pre><span class="c"># run it</span>
-inspect eval task.py <span class="a">--model</span> anthropic/claude-sonnet-4-0 \
+inspect eval task.py <span class="a">--model</span> openrouter/anthropic/claude-opus-4.8 \
   <span class="a">--epochs</span> 3 <span class="a">--max-connections</span> 10
 inspect view</pre>
   <div class="callout"><span class="label">That's the whole shape —</span> a dataset of repos with failing tests, an agent that edits and runs code inside a disposable Docker box, a scorer that runs <code>pytest</code>, repeated over epochs, with everything captured in the log. Swap the dataset, tools, and image and you have a different eval.</div>

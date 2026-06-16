@@ -6,7 +6,7 @@ this file directly with python, or point `inspect eval-set` at several tasks.
     python examples/13_eval_set/task.py
     # or:
     inspect eval-set examples/01_hello/task.py examples/02_multiple_choice/task.py \
-        --model openai/gpt-4o-mini --log-dir ./logs/suite
+        --model openrouter/openai/gpt-5.4-mini --log-dir ./logs/suite
 """
 
 from inspect_ai import Task, eval_set, task
@@ -36,7 +36,7 @@ def elements_quiz():
 if __name__ == "__main__":
     success, logs = eval_set(
         tasks=[capitals_quiz(), elements_quiz()],
-        model="openai/gpt-4o-mini",
+        model="openrouter/openai/gpt-5.4-mini",
         log_dir="./logs/suite-13",
     )
     print("all tasks succeeded:", success)

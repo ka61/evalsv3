@@ -59,7 +59,7 @@ def sandbagging():
 ## Run it
 
 ```bash
-inspect eval examples/17_apollo_sandbagging/task.py --model openai/gpt-4o-mini
+inspect eval examples/17_apollo_sandbagging/task.py --model openrouter/openai/gpt-5.4-mini
 inspect view
 ```
 

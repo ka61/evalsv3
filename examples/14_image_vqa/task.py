@@ -1,10 +1,10 @@
 """Example 14 — Vision: single-image question answering.
 
 Multimodal input. Build a chat message that mixes text and an image, then ask a
-vision-capable model what it sees (gpt-4o, claude-sonnet-4-0, gemini-2.5-pro).
+vision-capable model what it sees (openrouter/openai/gpt-5.4, openrouter/anthropic/claude-opus-4.8, openrouter/qwen/qwen3.6-flash).
 
 Run:
-    inspect eval examples/14_image_vqa/task.py --model openai/gpt-4o
+    inspect eval examples/14_image_vqa/task.py --model openrouter/openai/gpt-5.4
 """
 
 from pathlib import Path

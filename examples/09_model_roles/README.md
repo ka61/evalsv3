@@ -27,21 +27,21 @@ def roles_demo():
         ],
         solver=generate(),
         scorer=model_graded_qa(),
-        model_roles={"grader": "openai/gpt-4o-mini"},
+        model_roles={"grader": "openrouter/openai/gpt-5.4-mini"},
     )
 ```
 
 - **`solver=generate()`** uses the **main** model (the `--model` you pass).
 - **`scorer=model_graded_qa()`** grades using the **`grader`** role.
-- **`model_roles={"grader": "openai/gpt-4o-mini"}`** sets a default grader. You
+- **`model_roles={"grader": "openrouter/openai/gpt-5.4-mini"}`** sets a default grader. You
   can override it per run from the CLI.
 
 ## Run it
 
 ```bash
-# subject = gpt-4o-mini, grader = gpt-4o
+# subject = openrouter/openai/gpt-5.4-mini, grader = openrouter/openai/gpt-5.4
 inspect eval examples/09_model_roles/task.py \
-  --model openai/gpt-4o-mini --model-role grader=openai/gpt-4o
+  --model openrouter/openai/gpt-5.4-mini --model-role grader=openrouter/openai/gpt-5.4
 ```
 
 ## What happens, step by step

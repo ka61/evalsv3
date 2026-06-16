@@ -43,7 +43,7 @@ def shown(image_name, truth):
 ## Run it (needs a vision model)
 
 ```bash
-inspect eval examples/20_scheming_eval_awareness/task.py --model openai/gpt-4o
+inspect eval examples/20_scheming_eval_awareness/task.py --model openrouter/openai/gpt-5.4
 ```
 
 ## How to read the result
@@ -57,7 +57,7 @@ inspect eval examples/20_scheming_eval_awareness/task.py --model openai/gpt-4o
 
 ```bash
 # needs a VISION model (the cue is a screenshot)
-inspect eval examples/20_scheming_eval_awareness/task.py --model openai/gpt-4o
+inspect eval examples/20_scheming_eval_awareness/task.py --model openrouter/openai/gpt-5.4
 inspect view
 ```
 
