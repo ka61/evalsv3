@@ -89,7 +89,10 @@ python scripts/analyze_logs.py logs --no-llm
 python scripts/analyze_logs.py logs --out reports/run1   # -> reports/run1.md + .html
 ```
 
-The HTML report opens with a **"how to generate this" info box** and a **summary
+The HTML report opens with a **KPI band** (runs / tests / models / behaviours
+flagged / clean) and a **Key findings** list that surfaces the *interesting* runs
+first — every example/model combo where the behaviour under test actually showed up,
+each linking straight to that run. Below that is the **summary
 table** (one row per run, **grouped by test family**, with accuracy bars and a
 colour-coded verdict pill on each line). Each row's **📁 example name links to that
 example's directory in the repo**, and the test name beneath it **jumps to that exact
