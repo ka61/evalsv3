@@ -5,10 +5,10 @@
 #   scripts/run_example.sh 01                      # by number
 #   scripts/run_example.sh hello                   # by name fragment
 #   scripts/run_example.sh 21 --epochs 3           # extra inspect args pass through
-#   scripts/run_example.sh 23 --model openai/gpt-4o
+#   scripts/run_example.sh 23 --model openrouter/openai/gpt-4o
 #
-# The model defaults to $INSPECT_EVAL_MODEL, else openai/gpt-4o-mini (which is
-# vision-capable, so the image examples work). Override with --model.
+# The model defaults to $INSPECT_EVAL_MODEL, else openrouter/openai/gpt-4o-mini
+# (vision-capable, so the image examples work). Override with --model.
 # API keys are read automatically from the repo-root .env by Inspect.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,7 +35,7 @@ mkdir -p "$logdir"
 
 # default model only if the caller didn't pass one and none is set in the env
 if ! printf ' %s ' "$*" | grep -q ' --model ' && [ -z "${INSPECT_EVAL_MODEL:-}" ]; then
-  export INSPECT_EVAL_MODEL="openai/gpt-4o-mini"
+  export INSPECT_EVAL_MODEL="openrouter/openai/gpt-4o-mini"
 fi
 
 echo "▶ running $name  →  logs in $logdir/"

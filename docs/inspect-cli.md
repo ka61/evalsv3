@@ -212,6 +212,8 @@ Most flags have an env equivalent — usually the flag name upper-cased with an
 | `--log-level` | `log_level` | `INSPECT_LOG_LEVEL` |
 | `--log-format` | `log_format` | `INSPECT_LOG_FORMAT` |
 
+**Tip — one key, any model:** set `OPENROUTER_API_KEY` and use model ids like `openrouter/openai/gpt-4o` or `openrouter/anthropic/claude-3.5-sonnet`; switch models by changing just `--model` / `INSPECT_EVAL_MODEL`.
+
 Explicit flags always override `.env` / env values. Provider keys
 (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, …)
 are read from the environment too. **Never commit `.env`.**

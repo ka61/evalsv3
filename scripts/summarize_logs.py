@@ -33,6 +33,9 @@ def _load_dotenv(start_dirs):
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
                         k, v = line.split("=", 1)
+                        v = v.strip()
+                        if v[:1] not in ('"', "'"):
+                            v = v.split(" #", 1)[0].rstrip()
                         os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
                 return
 

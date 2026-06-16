@@ -7,7 +7,7 @@
 # Usage:
 #   scripts/run_all.sh                          # all non-Docker examples
 #   scripts/run_all.sh --with-docker            # include Docker ones too
-#   scripts/run_all.sh --limit 3 --model openai/gpt-4o
+#   scripts/run_all.sh --limit 3 --model openrouter/openai/gpt-4o
 set -uo pipefail   # NOT -e: keep going if one example fails
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"

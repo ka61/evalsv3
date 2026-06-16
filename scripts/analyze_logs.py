@@ -8,7 +8,7 @@ For every `.eval` log it:
   * computes a **verdict** in plain words (e.g. "Scheming observed in 0% of runs");
   * shows the **full transcript of every sample** in a collapsible block
     (system / user / assistant / tool messages, tool calls, the score & judge note);
-  * optionally asks an LLM (default openai/gpt-5.5, with extended thinking) to write
+  * optionally asks an LLM (default openrouter/openai/gpt-5.5, extended thinking) to write
     a narrative summary.
 
 Outputs `<out>.md` and a self-contained styled `<out>.html` (table of contents +
@@ -16,7 +16,7 @@ floating Contents/Top button). No third-party deps.
 
 Usage:
     python scripts/analyze_logs.py                       # ./logs -> logs/ANALYSIS.{md,html}
-    python scripts/analyze_logs.py logs --model openai/gpt-5.5-pro
+    python scripts/analyze_logs.py logs --model openrouter/anthropic/claude-3.5-sonnet
     python scripts/analyze_logs.py logs --reasoning-effort medium
     python scripts/analyze_logs.py logs --no-llm         # explanations + verdicts + stats only
     python scripts/analyze_logs.py logs --max-transcripts 0   # include EVERY sample
@@ -785,6 +785,9 @@ def _load_dotenv(start_dirs):
                     if not line or line.startswith("#") or "=" not in line:
                         continue
                     k, v = line.split("=", 1)
+                    v = v.strip()
+                    if v[:1] not in ('"', "'"):
+                        v = v.split(" #", 1)[0].rstrip()  # drop inline comment on unquoted value
                     os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
                 return str(env)
     return None
@@ -793,7 +796,8 @@ def _load_dotenv(start_dirs):
 def main():
     ap = argparse.ArgumentParser(description="Analyse Inspect eval logs into a detailed Markdown + HTML report.")
     ap.add_argument("log_dir", nargs="?", default="logs")
-    ap.add_argument("--model", default="openai/gpt-5.5", help="analyst model (default: openai/gpt-5.5)")
+    ap.add_argument("--model", default="openrouter/openai/gpt-5.5",
+                    help="analyst model (default: openrouter/openai/gpt-5.5; any openrouter/... or provider/... id)")
     ap.add_argument("--reasoning-effort", default="high", choices=["minimal", "low", "medium", "high"],
                     help="extended-thinking budget for the analyst (default: high)")
     ap.add_argument("--no-llm", action="store_true", help="skip the LLM step (explanations + verdicts + stats only)")

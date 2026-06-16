@@ -111,6 +111,7 @@ Data details for every example, plus a table of popular benchmarks, are in
 Logs are written to `logs/<example>/` (gitignored); keys come from `.env`.
 
 ```bash
+scripts/run_interactive.sh          # menu: pick the example + model (asks for model unless --model)
 scripts/run_example.sh 01            # run one (by number or name fragment)
 scripts/run_example.sh 21 --epochs 3 # extra flags pass to `inspect eval`
 scripts/run_all.sh                   # run all (skips Docker examples)
@@ -145,6 +146,7 @@ evalsv3/
     inspect-platform-design.html  # a platform design spec
     implementation-plan.html      # build plan for that platform
   scripts/             # helpers (see scripts/README.md)
+    run_interactive.sh            # menu: pick example + model, then run
     run_example.sh · run_all.sh   # run one / all examples -> logs/
     view_results.sh               # open the viewer / print a summary table
     summarize_logs.py             # the summary table backend
@@ -157,17 +159,60 @@ evalsv3/
   DATASETS.md · CONTRIBUTING.md · .env.example · requirements.txt
 ```
 
-## Models
+## Models — switch easily via OpenRouter (recommended)
 
-Set a default in `.env` (`INSPECT_EVAL_MODEL`) or pass `--model provider/name`:
+The simplest setup is **one OpenRouter key** for every model. Put
+`OPENROUTER_API_KEY` in `.env` and set a default model — then switch models by
+editing a single line (or `--model`):
 
-- `openai/gpt-4o-mini` · `openai/gpt-4o` (vision-capable — needed for examples 14–16, 20–22)
-- `anthropic/claude-sonnet-4-0`
-- `deepseek/deepseek-chat`
-- self-hosted: `vllm/<hf-model>` (needs a GPU)
+```bash
+# .env
+OPENROUTER_API_KEY=sk-or-...
+INSPECT_EVAL_MODEL=openrouter/openai/gpt-4o-mini   # change this to switch everywhere
+```
 
-The report writer `scripts/analyze_logs.py` defaults to `openai/gpt-5.5` as the
-analyst model (override with `--model`).
+Use any [OpenRouter model](https://openrouter.ai/models) as `openrouter/<id>`:
+
+- `openrouter/openai/gpt-4o` · `openrouter/openai/gpt-5.5` (vision-capable — needed for examples 14–16, 20–22)
+- `openrouter/anthropic/claude-3.5-sonnet`
+- `openrouter/google/gemini-2.5-pro` · `openrouter/deepseek/deepseek-chat`
+
+Per-run override: `inspect eval task.py --model openrouter/anthropic/claude-3.5-sonnet`
+or `scripts/run_example.sh 17 --model openrouter/google/gemini-2.5-pro`.
+
+**Prefer native provider keys instead?** Set `OPENAI_API_KEY` /
+`ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` in `.env` and use plain ids
+(`openai/gpt-4o`, `anthropic/claude-sonnet-4-0`, …); self-host with
+`vllm/<hf-model>`. The report writer `scripts/analyze_logs.py` defaults to
+`openrouter/openai/gpt-5.5` (override with `--model`).
+
+## Example models to try
+
+A starting menu of OpenRouter model ids — set one as `INSPECT_EVAL_MODEL` in
+`.env` or pass `--model`. Exact ids and prices change, so browse
+[openrouter.ai/models](https://openrouter.ai/models) for the current list.
+
+| Model (`--model`) | Input | Good for |
+|---|---|---|
+| `openrouter/openai/gpt-4o-mini` | text + image (multimodal) | cheap default — runs every example, incl. vision |
+| `openrouter/openai/gpt-4o` | text + image (multimodal) | stronger general + vision |
+| `openrouter/openai/gpt-5.5` | text + image, reasoning | frontier; the analysis-report default analyst |
+| `openrouter/anthropic/claude-3.5-sonnet` | text + image (multimodal) | strong coding & agentic (examples 04, 05) |
+| `openrouter/google/gemini-2.5-pro` | text + image, long context | reasoning + very large context |
+| `openrouter/google/gemini-2.5-flash` | text + image (multimodal) | fast, cheap multimodal |
+| `openrouter/deepseek/deepseek-chat` | text only | low-cost general (text-only examples) |
+| `openrouter/deepseek/deepseek-r1` | text, reasoning | cheap chain-of-thought (example 12) |
+| `openrouter/meta-llama/llama-3.3-70b-instruct` | text only | open-weight, text-only |
+| `openrouter/qwen/qwen2.5-vl-72b-instruct` | text + image (multimodal) | open-weight vision |
+
+> **Pick by capability:** the vision examples (14–16, 20–22) need a **text + image**
+> model — text-only ones will error there. The reasoning example (12) shines with a
+> **reasoning** model (e.g. `…/gpt-5.5`, `…/deepseek-r1`, `…/gemini-2.5-pro`).
+> Agentic/sandbox examples (04, 05, 10, 19, 22) run on any model but benefit from
+> strong tool-use models.
+
+Prefer not to use OpenRouter? Drop the `openrouter/` prefix and set the matching
+native key (e.g. `--model openai/gpt-4o` with `OPENAI_API_KEY`).
 
 ## Contributing & the paved path
 
