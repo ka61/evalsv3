@@ -203,7 +203,10 @@ A starting menu of OpenRouter model ids — set one as `INSPECT_EVAL_MODEL` in
 | `openrouter/deepseek/deepseek-chat` | text only | low-cost general (text-only examples) |
 | `openrouter/deepseek/deepseek-r1` | text, reasoning | cheap chain-of-thought (example 12) |
 | `openrouter/meta-llama/llama-3.3-70b-instruct` | text only | open-weight, text-only |
-| `openrouter/qwen/qwen2.5-vl-72b-instruct` | text + image (multimodal) | open-weight vision |
+| `openrouter/qwen/qwen2.5-vl-72b-instruct` | text + image (multimodal) | open-weight vision (Qwen-VL) — good for image inputs |
+| `openrouter/meta-llama/llama-3.2-90b-vision-instruct` | text + image (multimodal) | open-weight vision (Llama) |
+| `openrouter/mistralai/pixtral-large-2411` | text + image (multimodal) | open-weight vision (Pixtral) |
+| `openrouter/x-ai/grok-2-vision-1212` | text + image (multimodal) | vision (Grok) |
 
 > **Pick by capability:** the vision examples (14–16, 20–22) need a **text + image**
 > model — text-only ones will error there. The reasoning example (12) shines with a

@@ -29,7 +29,7 @@ for d in examples/[0-9]*/; do
     echo "⏭  skip $name (needs Docker — rerun with --with-docker)"; skip=$((skip+1)); continue
   fi
   echo; echo "──────── $name ────────"
-  if scripts/run_example.sh "$num" ${extra[@]+"${extra[@]}"}; then
+  if bash "$ROOT/scripts/run_example.sh" "$num" ${extra[@]+"${extra[@]}"}; then
     pass=$((pass+1))
   else
     echo "✗ FAILED: $name"; fail=$((fail+1)); failed_names+=("$name")

@@ -26,6 +26,9 @@ MODELS=(
   "openrouter/anthropic/claude-3.5-sonnet|text+image · coding & agentic"
   "openrouter/google/gemini-2.5-pro|text+image · long context, reasoning"
   "openrouter/google/gemini-2.5-flash|text+image · fast & cheap"
+  "openrouter/qwen/qwen2.5-vl-72b-instruct|text+image · open-weight vision (Qwen-VL)"
+  "openrouter/meta-llama/llama-3.2-90b-vision-instruct|text+image · open-weight vision (Llama)"
+  "openrouter/mistralai/pixtral-large-2411|text+image · vision (Pixtral)"
   "openrouter/deepseek/deepseek-chat|text only · low cost"
   "openrouter/deepseek/deepseek-r1|text · reasoning"
 )
@@ -78,7 +81,7 @@ fi
 echo
 echo "▶ example=$EXAMPLE   model=$MODEL   extra=${EXTRA[*]:-(none)}"
 if [ "$DRY" -eq 1 ]; then
-  echo "(dry-run) would run: scripts/run_example.sh $EXAMPLE --model $MODEL ${EXTRA[*]:-}"
+  echo "(dry-run) would run: bash scripts/run_example.sh $EXAMPLE --model $MODEL ${EXTRA[*]:-}"
   exit 0
 fi
-exec scripts/run_example.sh "$EXAMPLE" --model "$MODEL" ${EXTRA[@]+"${EXTRA[@]}"}
+exec bash "$ROOT/scripts/run_example.sh" "$EXAMPLE" --model "$MODEL" ${EXTRA[@]+"${EXTRA[@]}"}
