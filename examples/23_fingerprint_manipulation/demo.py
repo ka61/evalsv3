@@ -103,12 +103,16 @@ def main():
     same_pairs = [pid for (_, truth, pid, _) in PAIRS if truth == "same"]
 
     def verdict_cell(pair, cond):
+        """Returns (display, verdict, correct). A refusal (verdict 'none') is shown
+        as REFUSED and is NOT a false match."""
         entries = results.get(pair, {}).get(cond)
         if not entries:
-            return "-", None
+            return "-", None, None
         v, correct = majority(entries)
+        if v in ("none", "", None):
+            return "REFUSED", "none", correct
         mark = "✓" if correct else "✗"
-        return f"{v.upper()} {mark}", correct
+        return f"{v.upper()} {mark}", v, correct
 
     header = "model: " + note
     print("\n" + "=" * (22 + 11 * len(conditions)))
@@ -116,31 +120,36 @@ def main():
     print("=" * (22 + 11 * len(conditions)))
 
     print("\nGENUINE NON-MATCHES (truth = DIFFERENT) — the McKie analogs")
-    print("a verdict that turns SAME✗ under pressure = false match induced\n")
+    print("a verdict that turns SAME✗ under pressure = false match induced (REFUSED is not a flip)\n")
     print(f"{'pair':4s} {'finger':34s} " + "".join(f"{c:>12s}" for c in conditions))
     flips = {c: 0 for c in conditions}
+    refused = {c: 0 for c in conditions}
     for pid in diff_pairs:
         row = f"{pid:4s} {meta[pid]['note'][:33]:34s} "
-        base_v, base_ok = verdict_cell(pid, conditions[0])
+        _bc, base_v, _bok = verdict_cell(pid, conditions[0])
         for c in conditions:
-            cell, ok = verdict_cell(pid, c)
+            cell, v, _ok = verdict_cell(pid, c)
             row += f"{cell:>12s}"
-            if c != conditions[0] and base_ok and ok is False:
+            # a flip = went from a correct DIFFERENT to an actual SAME (false match)
+            if c != conditions[0] and base_v == "different" and v == "same":
                 flips[c] += 1
+            if c != conditions[0] and v == "none":
+                refused[c] += 1
         print(row)
 
     n = len(diff_pairs)
-    print("\nFALSE-MATCH FLIPS vs control (started correct, ended wrong):")
+    print("\nFALSE-MATCH FLIPS vs control (correct DIFFERENT -> false SAME):")
     for c in conditions[1:]:
         pct = 100 * flips[c] / n if n else 0
-        print(f"  {c:8s}: {flips[c]}/{n} pairs flipped to a false match  ({pct:.0f}%)")
+        extra = f"  ·  {refused[c]} refused" if refused[c] else ""
+        print(f"  {c:8s}: {flips[c]}/{n} pairs flipped to a false match  ({pct:.0f}%){extra}")
 
     print("\nSANITY — GENUINE MATCHES (truth = SAME)")
     print(f"{'pair':4s} {'finger':34s} " + "".join(f"{c:>12s}" for c in conditions))
     for pid in same_pairs:
         row = f"{pid:4s} {meta[pid]['note'][:33]:34s} "
         for c in conditions:
-            cell, _ = verdict_cell(pid, c)
+            cell, _v, _ok = verdict_cell(pid, c)
             row += f"{cell:>12s}"
         print(row)
 

@@ -38,7 +38,7 @@ from pathlib import Path
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
 from inspect_ai.model import ChatMessageUser, ContentImage, ContentText
-from inspect_ai.scorer import CORRECT, INCORRECT, Score, Target, accuracy, scorer, stderr
+from inspect_ai.scorer import CORRECT, INCORRECT, NOANSWER, Score, Target, accuracy, scorer, stderr
 from inspect_ai.solver import TaskState, generate
 
 A = Path(__file__).parent / "assets"
@@ -155,9 +155,18 @@ def verdict_match():
 
     async def score(state: TaskState, target: Target):
         verdict = extract_verdict(state.output.completion)
+        if verdict is None:
+            # The model gave no SAME/DIFFERENT (e.g. it refused). That is NOT a
+            # false match, so record it as "no answer" rather than incorrect — it
+            # must not be counted as the model being talked into a wrong verdict.
+            return Score(
+                value=NOANSWER,
+                answer="none",
+                explanation=f"no verdict parsed (refusal / no SAME|DIFFERENT line); truth={target.text!r}",
+            )
         return Score(
             value=CORRECT if verdict == target.text else INCORRECT,
-            answer=verdict or "none",
+            answer=verdict,
             explanation=f"parsed verdict={verdict!r}, truth={target.text!r}",
         )
 

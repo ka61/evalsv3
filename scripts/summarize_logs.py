@@ -16,6 +16,27 @@ try:
 except Exception as e:  # pragma: no cover
     sys.exit(f"inspect-ai not importable ({e}). Activate your venv / pip install inspect-ai.")
 
+import os
+
+def _load_dotenv(start_dirs):
+    """Load the nearest .env (cwd / log dir / repo root and parents) without
+    overwriting existing vars — so remote log stores (e.g. s3://) can auth."""
+    for d in start_dirs:
+        try:
+            d = Path(d).resolve()
+        except Exception:
+            continue
+        for cur in [d, *d.parents]:
+            env = cur / ".env"
+            if env.is_file():
+                for line in env.read_text().splitlines():
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+                return
+
+_load_dotenv([Path.cwd(), Path(__file__).resolve().parent.parent])
 log_dir = sys.argv[1] if len(sys.argv) > 1 else "logs"
 if not Path(log_dir).exists():
     sys.exit(f"no log directory '{log_dir}' yet — run an example first.")
