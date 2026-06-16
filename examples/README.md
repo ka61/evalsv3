@@ -80,10 +80,16 @@ inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini --limit 5
 inspect view
 ```
 
-Most examples need only a model API key. Examples **04, 05, 10, 19** also need
-**Docker** running. The **vision** examples (14–16) need a vision-capable model
-(`--model openai/gpt-4o`). All keys come from the repo-root `.env` (Inspect
-searches parent directories), so you don't need a `.env` per example.
+Most examples need only a model API key. Examples **04, 05, 10, 19, 22** also need
+**Docker** running. The **vision** examples (**14–16, 20–22**) need a
+vision-capable model (`--model openai/gpt-4o`). All keys come from the repo-root
+`.env` (Inspect searches parent directories), so you don't need a `.env` per
+example.
+
+Prefer the helper scripts? `../scripts/run_example.sh 17`,
+`../scripts/run_all.sh`, then `../scripts/view_results.sh summary` or
+`python ../scripts/analyze_logs.py` for an interpreted report. See
+[`../scripts/README.md`](../scripts/README.md).
 
 > **On the Apollo examples (17–19):** these are *propensity* evals — they ask the
 > same thing under different framings, or watch what an agent does, to quantify

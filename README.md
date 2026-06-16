@@ -28,7 +28,8 @@ inspect eval examples/01_hello/task.py --model openai/gpt-4o-mini --limit 5
 inspect view                # browse the .eval log in your browser
 ```
 
-Requires **Python ≥ 3.10**. Examples 04–05 also need **Docker** running.
+Requires **Python ≥ 3.10**. Examples **04, 05, 10, 19, 22** also need **Docker**;
+the vision examples (**14–16, 20–22**) need a vision-capable model (e.g. `gpt-4o`).
 
 ## Open it in VS Code
 
@@ -114,38 +115,59 @@ scripts/run_example.sh 01            # run one (by number or name fragment)
 scripts/run_example.sh 21 --epochs 3 # extra flags pass to `inspect eval`
 scripts/run_all.sh                   # run all (skips Docker examples)
 scripts/run_all.sh --with-docker     # include 04, 05, 10, 19, 22
-scripts/view_results.sh              # open the log viewer over all runs
-scripts/view_results.sh summary      # quick text table of every run's score
 ```
 
-See [`scripts/README.md`](scripts/README.md) for details.
+### View & analyse the results
+
+```bash
+scripts/view_results.sh              # open the interactive Inspect log viewer
+scripts/view_results.sh summary      # quick text table of every run's score
+python scripts/analyze_logs.py       # write a layman-friendly report -> logs/ANALYSIS.md + .html
+python scripts/analyze_logs.py logs --no-llm   # stats + plain-English verdicts, no model call
+```
+
+`analyze_logs.py` explains, in plain English, what each example tests and gives a
+**verdict** (did sandbagging / deception / scheming happen?), then — when a model
+is reachable — adds a GPT‑5.5 narrative. It writes both Markdown and a styled HTML
+report (with a table of contents). See [`scripts/README.md`](scripts/README.md).
+
+For the full Inspect command line, see [`docs/inspect-cli.md`](docs/inspect-cli.md).
 
 ## Repository layout
 
 ```
 evalsv3/
-  examples/            # the learning path (01 → 05), each with its own README
+  examples/            # the learning path (01 → 23), each with its own README
+    assets/diagrams/   # concept diagrams used in the example READMEs
   docs/                # deep-dive guides
     inspect-cli.md                # detailed Inspect CLI reference (flags + examples)
     inspect-evals-guide.html      # detailed how-to for Inspect
     inspect-platform-design.html  # a platform design spec
     implementation-plan.html      # build plan for that platform
+  scripts/             # helpers (see scripts/README.md)
+    run_example.sh · run_all.sh   # run one / all examples -> logs/
+    view_results.sh               # open the viewer / print a summary table
+    summarize_logs.py             # the summary table backend
+    analyze_logs.py               # write an interpreted report (md + html)
+    setup_github.sh               # one-time repo secrets + branch safety
   .vscode/             # recommended extensions + settings
   .devcontainer/       # one-click reproducible environment
   .github/             # CI, manual eval workflow, CODEOWNERS, templates
-  scripts/setup_github.sh   # configure repo secrets + branch protection
-  .env.example         # copy to .env and add your keys
-  requirements.txt
+  logs/                # eval logs land here (gitignored)
+  DATASETS.md · CONTRIBUTING.md · .env.example · requirements.txt
 ```
 
 ## Models
 
 Set a default in `.env` (`INSPECT_EVAL_MODEL`) or pass `--model provider/name`:
 
-- `openai/gpt-4o-mini` · `openai/gpt-4o`
+- `openai/gpt-4o-mini` · `openai/gpt-4o` (vision-capable — needed for examples 14–16, 20–22)
 - `anthropic/claude-sonnet-4-0`
 - `deepseek/deepseek-chat`
 - self-hosted: `vllm/<hf-model>` (needs a GPU)
+
+The report writer `scripts/analyze_logs.py` defaults to `openai/gpt-5.5` as the
+analyst model (override with `--model`).
 
 ## Contributing & the paved path
 

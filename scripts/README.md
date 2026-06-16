@@ -7,6 +7,17 @@ repo-root `.env` (Inspect loads it), so just have your keys there.
 All eval logs are written under **`logs/<example_name>/`** at the repo root
 (`logs/` is gitignored).
 
+## Typical workflow
+
+```bash
+scripts/run_example.sh 17        # 1. run an example (or scripts/run_all.sh)
+scripts/view_results.sh summary  # 2. glance at the scores
+python scripts/analyze_logs.py   # 3. get an interpreted report (logs/ANALYSIS.md + .html)
+```
+
+For the raw `inspect` command line behind these scripts, see
+[`../docs/inspect-cli.md`](../docs/inspect-cli.md).
+
 ## Run one example — `run_example.sh`
 
 ```bash
@@ -55,12 +66,13 @@ python scripts/analyze_logs.py logs --no-llm
 python scripts/analyze_logs.py logs --out reports/run1   # -> reports/run1.md + .html
 ```
 
-It computes headline metrics, **per-condition breakdowns** (control vs.
-incentivized, etc.), and includes a few transcripts, then GPT-5.5 (the default analyst, override with --model) writes an
-executive summary, per-eval interpretation (incl. sandbagging / deception /
-scheming signals), caveats, and next steps. The interpretation uses Inspect's
-model layer, so it reads your `.env` key and works with any provider. With
-`--no-llm` (or no key/network) it still writes the full statistics report.
+For every eval it writes a **plain-English explanation** (what it's testing, the
+terms it uses) and a **computed verdict** (e.g. "No sandbagging — 67% vs 67%",
+"Scheming observed in 0% of runs"), plus per-condition tables and collapsible
+transcripts. GPT-5.5 (the default analyst; override with `--model`) adds a
+narrative summary written for a non-expert. The HTML has a table of contents and
+a floating Contents/Top button. With `--no-llm` (or no key/network) the
+explanations, verdicts and stats are all still produced locally.
 
 ## Other
 
