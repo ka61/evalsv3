@@ -110,26 +110,20 @@ def _cond_table(e):
     return ""
 
 
-def _pick_evidence(e):
-    trs = e["transcripts"]
+def _ordered_transcripts(e):
+    """All transcripts for a run, with the most illustrative samples first."""
+    trs = list(e["transcripts"])
     name = e["task"].lower()
-    picks = []
-    if "fingerprint" in name:
-        for t in trs:
-            md, ans = t["metadata"], (t.get("answer") or "").lower()
-            if md.get("truth") == "different" and "same" in ans:
-                picks.append(t)
-            if len(picks) >= 2:
-                break
-    elif "sandbag" in name:
-        for t in trs:
-            if t["metadata"].get("condition") == "incentivized" and t["score"] == "I":
-                picks.append(t)
-            if len(picks) >= 2:
-                break
-    if not picks:
-        picks = trs[:1]
-    return picks[:2]
+
+    def illustrative(t):
+        md, ans = t["metadata"], (t.get("answer") or "").lower()
+        if "fingerprint" in name:               # a genuine non-match called SAME = false match
+            return md.get("truth") == "different" and "same" in ans
+        if "sandbag" in name:                   # wrong answer under the incentive
+            return md.get("condition") == "incentivized" and t["score"] == "I"
+        return t["score"] in ("I", "N")         # otherwise surface failures first
+    trs.sort(key=lambda t: 0 if illustrative(t) else 1)   # stable: keeps original order within groups
+    return trs
 
 
 def _finding_html(idx, e):
@@ -149,13 +143,16 @@ def _finding_html(idx, e):
     if e["task"] in A.SAFETY_REF:
         rn, ru = A.SAFETY_REF[e["task"]]
         ref = f'<p class="apollo">\U0001F4DA Further reading: <a href="{esc(ru)}" target="_blank" rel="noopener">{esc(rn)}</a></p>'
-    # evidence
+    # evidence — ALL sample transcripts (illustrative ones first), long lists behind a toggle
     ev = ""
-    picks = _pick_evidence(e)
-    if picks:
-        ev = ('<div class="evidence"><div class="ev-h">Representative transcript'
-              + ('s' if len(picks) > 1 else '') + '</div>'
-              + "".join(A.transcript_html(t) for t in picks) + '</div>')
+    trs = _ordered_transcripts(e)
+    if trs:
+        inner = "".join(A.transcript_html(t) for t in trs)
+        if len(trs) > 6:
+            inner = (f'<details class="allsamples" open><summary>📂 All {len(trs)} sample '
+                     f'transcripts (illustrative ones first)</summary>{inner}</details>')
+        ev = (f'<div class="evidence"><div class="ev-h">Sample transcripts ({len(trs)} total)'
+              f'</div>{inner}</div>')
     cond = _cond_table(e)
     return f"""
 <section class="finding">
@@ -282,6 +279,9 @@ table.summary td:first-child{{text-align:center;color:var(--muted);font-variant-
 .apollo{{font-size:13.5px;color:var(--muted)}}
 table.data{{font-size:13px}} table.data td:first-child{{font-weight:600}}
 .evidence{{margin-top:8px}} .ev-h{{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px}}
+details.allsamples{{margin:8px 0;border:1px dashed var(--line);border-radius:10px;padding:6px 14px;background:#fbfcfd}}
+details.allsamples>summary{{cursor:pointer;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;padding:4px 0}}
+details.allsamples[open]>summary{{margin-bottom:6px;border-bottom:1px solid var(--line)}}
 details.transcript{{margin:8px 0;background:#fbfcfd;border:1px solid var(--line);border-radius:8px;padding:6px 12px}}
 details.transcript>summary{{cursor:pointer;font-weight:600;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12.5px}}
 .msg{{margin:8px 0;padding:8px 10px;border-radius:6px;background:#f7f9fb;border:1px solid #e6ecf2}}
