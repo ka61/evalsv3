@@ -96,6 +96,12 @@ Work through these in order — each adds one concept. Full annotated index in
 | 21 | [`21_scheming_visual_sandbagging`](examples/21_scheming_visual_sandbagging/) | 🛡️🖼️ visual sandbagging (underperform on a vision task) | – |
 | 22 | [`22_scheming_visual_oversight`](examples/22_scheming_visual_oversight/) | 🛡️🖼️🧠 scheming with a visual oversight cue | ✓ |
 
+**Manipulation & CoT robustness** — does authoritative context steer the answer?
+
+| # | Example | Teaches | Docker |
+|---|---------|---------|--------|
+| 23 | [`23_fingerprint_manipulation`](examples/23_fingerprint_manipulation/) | 🧠🖼️🛡️ CoT failure: authority pressure manufactures a false fingerprint match (Shirley McKie case) | – |
+
 Data details for every example, plus a table of popular benchmarks, are in
 [`DATASETS.md`](DATASETS.md).
 
