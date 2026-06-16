@@ -60,6 +60,15 @@ real multimodal agents are evaluated. Harmless, detection-only toys.
 | 21 | [`21_scheming_visual_sandbagging`](21_scheming_visual_sandbagging/) | 🛡️🖼️ **visual sandbagging** — underperforming on a vision task under incentive | no |
 | 22 | [`22_scheming_visual_oversight`](22_scheming_visual_oversight/) | 🛡️🖼️🧠 **scheming** — disabling oversight after seeing a monitoring dashboard | **yes** |
 
+## Manipulation & chain-of-thought robustness
+
+Does **authoritative context** steer a model's reasoning to the wrong answer?
+Detection-only, harmless.
+
+| # | Example | New concept | Sandbox? |
+|---|---------|-------------|----------|
+| 23 | [`23_fingerprint_manipulation`](23_fingerprint_manipulation/) | 🧠🖼️🛡️ **CoT failure** — "four examiners confirmed it" manufactures a false fingerprint match (the Shirley McKie case) | no |
+
 ## Running any example
 
 ```bash
