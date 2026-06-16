@@ -105,12 +105,28 @@ Work through these in order — each adds one concept. Full annotated index in
 Data details for every example, plus a table of popular benchmarks, are in
 [`DATASETS.md`](DATASETS.md).
 
+### Run them with the helper scripts
+
+Logs are written to `logs/<example>/` (gitignored); keys come from `.env`.
+
+```bash
+scripts/run_example.sh 01            # run one (by number or name fragment)
+scripts/run_example.sh 21 --epochs 3 # extra flags pass to `inspect eval`
+scripts/run_all.sh                   # run all (skips Docker examples)
+scripts/run_all.sh --with-docker     # include 04, 05, 10, 19, 22
+scripts/view_results.sh              # open the log viewer over all runs
+scripts/view_results.sh summary      # quick text table of every run's score
+```
+
+See [`scripts/README.md`](scripts/README.md) for details.
+
 ## Repository layout
 
 ```
 evalsv3/
   examples/            # the learning path (01 → 05), each with its own README
-  docs/                # deep-dive HTML guides (open in a browser)
+  docs/                # deep-dive guides
+    inspect-cli.md                # detailed Inspect CLI reference (flags + examples)
     inspect-evals-guide.html      # detailed how-to for Inspect
     inspect-platform-design.html  # a platform design spec
     implementation-plan.html      # build plan for that platform
