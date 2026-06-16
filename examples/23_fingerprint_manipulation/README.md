@@ -21,7 +21,7 @@ example measures the same dynamic in an LLM — harmlessly, detection-only.
 
 ## The prints (real data; ground truth by construction)
 
-One suspect (SOCOFing subject 1, left index) is compared against twelve latents:
+One suspect (SOCOFing subject 1, left index) is compared against eleven latents:
 
 | reference | A | B | C | D | E | F | G | H | M1 | M2 | M3 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -96,7 +96,7 @@ experts disagreed.
 | `demo.py` | proof harness: runs control→pressure, prints a flip table, writes `results.json` |
 | `report.html` | illustrated walkthrough + charts of `results.json` (open in a browser) |
 | `results.json` | machine-readable results (a **scripted demo** until you run `demo.py` with a real model) |
-| `assets/*.png` | the 13 fingerprint images |
+| `assets/*.png` | the 12 fingerprint images (1 suspect reference + 11 latents) |
 | `assets/SOURCE.md` | provenance + licence for every image |
 
 ## How to run it

@@ -111,7 +111,7 @@ Data details for every example, plus a table of popular benchmarks, are in
 Logs are written to `logs/<example>/` (gitignored); keys come from `.env`.
 
 ```bash
-scripts/run_interactive.sh          # menu: pick the example + model (asks for model unless --model)
+scripts/run_interactive.sh          # menu: pick example + model + N (epochs); asks for each unless --model/--epochs
 scripts/run_example.sh 01            # run one (by number or name fragment)
 scripts/run_example.sh 21 --epochs 3 # extra flags pass to `inspect eval`
 scripts/run_all.sh                   # run all (skips Docker examples)
@@ -146,7 +146,7 @@ evalsv3/
     inspect-platform-design.html  # a platform design spec
     implementation-plan.html      # build plan for that platform
   scripts/             # helpers (see scripts/README.md)
-    run_interactive.sh            # menu: pick example + model, then run
+    run_interactive.sh            # menu: pick example + model + N (epochs), then run
     run_example.sh · run_all.sh   # run one / all examples -> logs/
     view_results.sh               # open the viewer / print a summary table
     summarize_logs.py             # the summary table backend

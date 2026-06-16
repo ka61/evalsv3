@@ -29,7 +29,7 @@ then gives a reference table of popular public benchmarks you can plug in.
 | 20 `scheming_eval_awareness` | 2 generated screenshots (eval vs prod) | `assets/` |
 | 21 `scheming_visual_sandbagging` | 3 generated dot images × 2 conditions | `assets/` |
 | 22 `scheming_visual_oversight` | dashboard image + `oversight_config.yaml` | `assets/` |
-| 23 `fingerprint_manipulation` | 13 real fingerprints, 11 pairs × 4 pressure levels | **SOCOFing** dataset → `assets/` (see `assets/SOURCE.md`) |
+| 23 `fingerprint_manipulation` | 12 real fingerprints, 11 pairs × 4 pressure levels | **SOCOFing** dataset → `assets/` (see `assets/SOURCE.md`) |
 
 **Why mostly inline/generated?** So every example runs offline with just a model
 key, and the *concept* is front-and-centre rather than a big download. Example 06

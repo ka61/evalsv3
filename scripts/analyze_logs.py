@@ -350,6 +350,7 @@ def collect(log_dir, max_transcripts, max_chars):
 
         evals.append({
             "task": str(getattr(log.eval, "task", "?")),
+            "task_file": str(getattr(log.eval, "task_file", "") or ""),
             "model": str(getattr(log.eval, "model", "?")),
             "status": str(getattr(log, "status", "?")),
             "n_samples": len(samples),
@@ -529,6 +530,85 @@ def _verdict_class(emoji):
     return {"✅": "good", "⚠️": "warn", "❌": "bad"}.get(emoji, "neutral")
 
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _repo_base():
+    """Cached 'https://github.com/<owner>/<repo>/tree/main' from the git remote."""
+    if getattr(_repo_base, "_cache", None) is not None:
+        return _repo_base._cache
+    base = ""
+    try:
+        import subprocess
+        url = subprocess.check_output(
+            ["git", "-C", str(_REPO_ROOT), "remote", "get-url", "origin"],
+            stderr=subprocess.DEVNULL, text=True).strip()
+        if url.startswith("git@"):                       # git@github.com:owner/repo.git
+            url = "https://" + url.split("@", 1)[1].replace(":", "/", 1)
+        if url.startswith("ssh://"):
+            url = "https://" + url[len("ssh://"):].lstrip("/").replace(":", "/", 1)
+        if url.endswith(".git"):
+            url = url[:-4]
+        if url:
+            base = url + "/tree/main"
+    except Exception:
+        base = ""
+    base = base or "https://github.com/ka61/evalsv3/tree/main"
+    _repo_base._cache = base
+    return base
+
+
+def _scan_example_dirs():
+    """Map each @task function name -> its examples/<dir> (fallback when the log
+    didn't record a task_file)."""
+    if getattr(_scan_example_dirs, "_cache", None) is not None:
+        return _scan_example_dirs._cache
+    mapping = {}
+    exroot = _REPO_ROOT / "examples"
+    if exroot.is_dir():
+        for d in sorted(exroot.glob("[0-9]*")):
+            tp = d / "task.py"
+            if not tp.is_file():
+                continue
+            try:
+                src = tp.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            for m in re.finditer(r"@task\b[^\n]*\n(?:\s*@[^\n]*\n)*\s*def\s+(\w+)\s*\(", src):
+                mapping[m.group(1)] = d.name
+    _scan_example_dirs._cache = mapping
+    return mapping
+
+
+def _example_dir(e):
+    tf = (e.get("task_file") or "").replace("\\", "/")
+    m = re.search(r"examples/([0-9][^/]*)/", tf)
+    if m:
+        return m.group(1)
+    return _scan_example_dirs().get(e.get("task", ""))
+
+
+def _example_link(e):
+    """(dir_name, github_url) for an eval's example directory, or (None, None)."""
+    d = _example_dir(e)
+    return (d, f"{_repo_base()}/examples/{d}") if d else (None, None)
+
+
+def _assign_run_anchors(evals):
+    """Give every run a unique in-page anchor for its example/model combo."""
+    seen = {}
+    for e in evals:
+        if "error" in e:
+            continue
+        base = f"run-{_slug(e['task'])}-{_slug(e['model'])}"
+        if base in seen:
+            seen[base] += 1
+            base = f"{base}-{seen[base]}"
+        else:
+            seen[base] = 0
+        e["_anchor"] = base
+
+
 def _howto_box(repo="git@github.com:ka61/evalsv3.git"):
     """A single-line, colourful 'how this page was generated' info box."""
     def cmd(*lines):
@@ -583,8 +663,17 @@ def _summary_table(evals):
             short = _html.escape(vtext.split(".**")[0].replace("**", "").strip())
             cls = _verdict_class(emoji)
             ex = _explainer(e["task"])
-            name = (f'<a href="#{_ex_anchor(e["task"])}"><b>{_html.escape(e["task"])}</b></a>'
-                    f'<span class="sub">{_html.escape(ex["title"])}</span>')
+            anchor = e.get("_anchor") or _ex_anchor(e["task"])
+            d, durl = _example_link(e)
+            if durl:                                        # link the example name to the repo dir
+                exname = (f'<a class="exlink" href="{durl}" target="_blank" rel="noopener">'
+                          f'📁 {_html.escape(d)} ↗</a>')
+            else:
+                exname = f'<span class="exlink">{_html.escape(e["task"])}</span>'
+            # the in-page link jumps to THIS run (example/model combo), not just the section
+            name = (f'{exname}<span class="sub">'
+                    f'<a href="#{anchor}">{_html.escape(e["task"])} — {_html.escape(ex["title"])}</a>'
+                    f'</span>')
             if acc is None:
                 accell = '<span class="sub">&mdash;</span>'
             else:
@@ -594,13 +683,15 @@ def _summary_table(evals):
             pill = f'<span class="pill {cls}">{emoji} {short}</span>'
             rows.append(f'<tr><td>{name}</td><td><code>{_html.escape(e["model"])}</code></td>'
                         f'<td class="num">{e["n_samples"]}</td><td>{accell}</td><td>{pill}</td></tr>')
-    return ('<table class="summary"><thead><tr><th>Test</th><th>Model</th><th>N</th>'
+    return ('<table class="summary"><thead><tr><th>Example</th><th>Model</th><th>N</th>'
             '<th>Accuracy</th><th>Verdict</th></tr></thead><tbody>'
             + "".join(rows) + '</tbody></table>')
 
 
 def _one_eval_detail(e, L):
     """Append one run's verdict + numbers + breakdowns + transcripts to L."""
+    if e.get("_anchor"):                                 # precise jump target for this run
+        L += [f'<span id="{e["_anchor"]}" class="run-anchor"></span>', ""]
     emoji, vtext = verdict(e)
     cls = _verdict_class(emoji)
     callout = (f'<div class="verdict {cls}"><span class="vi">{emoji}</span>'
@@ -627,37 +718,113 @@ def _one_eval_detail(e, L):
         shown = e["n_shown"]
         extra = "" if shown >= e["n_samples"] else f" (showing first {shown} of {e['n_samples']})"
         L += [f"**Full transcripts{extra}:**", ""]
+        many = len(e["transcripts"]) > 6   # collapse a long list behind one toggle
+        if many:
+            L.append(f'<details class="allsamples"><summary>📂 Show all {len(e["transcripts"])} '
+                     f'sample transcripts</summary>')
         for tr in e["transcripts"]:
             L.append(transcript_html(tr))   # one raw-HTML line, passed through to HTML/MD
+        if many:
+            L.append("</details>")
         L.append("")
+
+
+def _stat_band(evals):
+    ok = [e for e in evals if "error" not in e]
+    runs = len(ok)
+    tests = len({e["task"] for e in ok})
+    models = len({e["model"] for e in ok})
+    flagged = clean = 0
+    for e in ok:
+        emoji, _ = verdict(e)
+        c = _verdict_class(emoji)
+        if c in ("warn", "bad"):
+            flagged += 1
+        elif c == "good":
+            clean += 1
+
+    def card(num, label, cls=""):
+        return (f'<div class="kpi {cls}"><div class="kpi-n">{num}</div>'
+                f'<div class="kpi-l">{_html.escape(label)}</div></div>')
+    return ('<div class="kpis">'
+            + card(runs, "runs")
+            + card(tests, "tests")
+            + card(models, "models")
+            + card(flagged, "behaviours flagged", "kpi-warn" if flagged else "kpi-good")
+            + card(clean, "clean results", "kpi-good")
+            + '</div>')
+
+
+def _key_findings(evals):
+    ok = [e for e in evals if "error" not in e]
+    bad, warn, info, good = [], [], [], []
+    for e in ok:
+        emoji, vtext = verdict(e)
+        short = vtext.split(".**")[0].replace("**", "").strip()
+        anchor = e.get("_anchor") or _ex_anchor(e["task"])
+        bucket = {"bad": bad, "warn": warn, "good": good}.get(_verdict_class(emoji), info)
+        bucket.append((emoji, e, short, anchor))
+
+    L = ["## Key findings", ""]
+    flagged = bad + warn                       # most interesting first
+    if flagged:
+        L += ["**The model showed the behaviour under test in these runs** — the headline "
+              "results (click to jump straight to the run):", ""]
+        for emoji, e, short, anchor in flagged:
+            L.append(f"- {emoji} [**{e['task']}**](#{anchor}) on `{e['model']}` — {short}")
+        L.append("")
+    else:
+        L += ["- ✅ **No concerning behaviour was flagged** in any run "
+              "(no sandbagging, deception, or scheming detected).", ""]
+    tail = []
+    if good:
+        tail.append(f"**{len(good)}** run(s) came back clean")
+    if info:
+        tail.append(f"**{len(info)}** run(s) are capability or plumbing checks (informational)")
+    if tail:
+        L += ["The rest: " + "; ".join(tail) + ". Full breakdown in the table below.", ""]
+    return L
 
 
 def render_report(evals, llm_text, log_dir, model_name):
     stamp = _dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     ok = [e for e in evals if "error" not in e]
-    L = ["# Eval analysis", "",
-         f"_Generated {stamp} from `{log_dir}/` — {len(evals)} log(s) across "
-         f"{len({e['task'] for e in ok})} test(s)._", "",
-         _howto_box(), "",
-         "## How to read this report", "",
-         "- An **eval** runs a model on a set of tasks; an automatic **scorer** marks each answer "
-         "**correct (C)** or **incorrect (I)** (some also record **N** — no answer / refused).",
-         "- The headline number is **accuracy** (share correct), reported with a **standard error** — "
-         "small runs are shaky, so treat tiny-sample numbers as indicative.",
-         "- Several examples are **AI-safety propensity tests**: not *can* the model misbehave, but "
-         "*will* it when given a reason. The coloured **Verdict** says, in plain words, whether the "
-         "behaviour (sandbagging, deception, scheming) actually showed up.",
-         "- Results are **grouped by test family** below. Expand any **Sample** to read the full "
-         "transcript. Technical terms link to the [glossary](#glossary).", ""]
+    _assign_run_anchors(evals)            # unique in-page anchor per example/model run
+    tests = len({e["task"] for e in ok})
+    models = len({e["model"] for e in ok})
 
-    # ---- summary first, right after the intro ----
+    # ---- top: one-line intro + KPI band + interesting results ----
+    L = ["# Eval analysis", "",
+         f"_Generated {stamp} from `{log_dir}/` — {len(evals)} log(s), "
+         f"{len(ok)} run(s) across {tests} test(s) and {models} model(s)._", "",
+         _stat_band(evals), ""]
+    L += _key_findings(evals)
+
+    # ---- the at-a-glance table (every example/model combo) ----
     L += ["## Results at a glance", "",
-          "One row per run, grouped by test family. Click a test name to jump to its detail.", "",
+          "Every example/model run, grouped by test family. The 📁 example name links to that "
+          "example's directory in the repo; the test name beneath it jumps to that exact run.", "",
           _summary_table(evals), ""]
 
     if llm_text:
         L += ["## AI analyst summary", "", f"_Written by `{model_name}` (extended thinking)._", "",
               llm_text, "", "---", ""]
+
+    # ---- collapsible 'about' (how to read + how to reproduce) keeps the top clean ----
+    L += ['<details class="about"><summary>ℹ️ About this report — how to read &amp; how to reproduce it</summary>', "",
+          "**How to read it**", "",
+          "- An **eval** runs a model on a set of tasks; an automatic **scorer** marks each answer "
+          "**correct (C)** or **incorrect (I)** (some also record **N** — no answer / refused).",
+          "- The headline number is **accuracy** (share correct), with a **standard error** — small "
+          "runs are shaky, so treat tiny-sample numbers as indicative.",
+          "- Several examples are **AI-safety propensity tests**: not *can* the model misbehave, but "
+          "*will* it when given a reason. The coloured **Verdict** says, in plain words, whether the "
+          "behaviour (sandbagging, deception, scheming) showed up.",
+          "- Detailed results are **grouped by test family**. Expand any **Sample** to read the full "
+          "transcript. Technical terms link to the [glossary](#glossary).", "",
+          "**How to reproduce it**", "",
+          _howto_box(), "",
+          "</details>", ""]
 
     # ---- detailed sections, grouped by category then by test ----
     by_cat = {}
@@ -870,6 +1037,12 @@ blockquote{{margin:14px 0;padding:12px 16px;border-left:4px solid var(--accent);
 ul{{padding-left:22px}} li{{margin:3px 0}} a{{color:#4763d0}} hr{{border:none;border-top:1px solid var(--line);margin:28px 0}}
 details.transcript{{margin:8px 0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 12px}}
 details.transcript>summary{{cursor:pointer;font-weight:600;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px}}
+details.allsamples{{margin:8px 0 6px;border:1px dashed var(--line);border-radius:10px;padding:6px 14px;background:#fbfcfd}}
+details.allsamples>summary{{cursor:pointer;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:13px;padding:4px 0}}
+details.allsamples[open]>summary{{margin-bottom:6px;border-bottom:1px solid var(--line)}}
+.exlink{{font-family:'JetBrains Mono',monospace;font-size:13px;text-decoration:none}}
+.run-anchor{{display:block;height:0}}
+:target{{scroll-margin-top:20px}}
 .msg{{margin:8px 0;padding:8px 10px;border-radius:6px;background:#f7f9fb;border:1px solid #e6ecf2}}
 .msg .role{{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;
            letter-spacing:.05em;color:#fff;background:var(--muted);border-radius:4px;padding:1px 7px;margin-bottom:5px}}
@@ -889,6 +1062,18 @@ nav.toc li{{margin:4px 0}} nav.toc a{{text-decoration:none}}
 .fab a:hover{{border-color:var(--accent);color:var(--accent)}}
 h3{{border-left:3px solid var(--accent);padding-left:10px;margin-top:26px}}
 h4{{font-family:'Space Grotesk',Inter,sans-serif;font-size:14px;margin:18px 0 4px;color:var(--muted)}}
+/* KPI stat band */
+.kpis{{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0 6px}}
+.kpi{{flex:1 1 110px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+     padding:12px 14px;text-align:center}}
+.kpi-n{{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;line-height:1.1;color:var(--ink)}}
+.kpi-l{{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:3px}}
+.kpi.kpi-good{{border-color:#bfe6cd;background:#f1faf4}} .kpi.kpi-good .kpi-n{{color:#1f7a45}}
+.kpi.kpi-warn{{border-color:#f0dca0;background:#fdf8ea}} .kpi.kpi-warn .kpi-n{{color:#9a6a08}}
+/* about (collapsible) */
+details.about{{margin:8px 0 4px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 16px}}
+details.about>summary{{cursor:pointer;font-weight:600;color:var(--muted);font-size:13.5px;padding:6px 0}}
+details.about[open]>summary{{border-bottom:1px solid var(--line);margin-bottom:8px}}
 /* how-to infobox */
 .howto{{background:linear-gradient(135deg,#eaf6f3 0%,#eaf1fb 100%);border:1px solid #cfe0ea;
        border-left:5px solid var(--accent);border-radius:12px;padding:16px 20px 18px;margin:18px 0 8px}}

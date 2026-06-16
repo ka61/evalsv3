@@ -91,8 +91,11 @@ python scripts/analyze_logs.py logs --out reports/run1   # -> reports/run1.md + 
 
 The HTML report opens with a **"how to generate this" info box** and a **summary
 table** (one row per run, **grouped by test family**, with accuracy bars and a
-colour-coded verdict pill on each line). Detailed sections follow, **grouped by
-family then by test** — so repeated runs of the same test sit together. For every
+colour-coded verdict pill on each line). Each row's **📁 example name links to that
+example's directory in the repo**, and the test name beneath it **jumps to that exact
+example/model run**. Detailed sections follow, **grouped by family then by test** — so
+repeated runs of the same test sit together; long transcript lists collapse behind a
+single **"Show all N sample transcripts"** toggle. For every
 eval it writes a **plain-English explanation** (what it's testing, the terms it
 uses) and a **computed verdict** (e.g. "No sandbagging — 67% vs 67%", "Scheming
 observed in 0% of runs"), plus per-condition tables and collapsible transcripts. The analyst model (default `openrouter/openai/gpt-5.5`, override with
