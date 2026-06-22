@@ -1,5 +1,5 @@
 # Core framework
-inspect-ai>=0.3.130
+inspect-ai>=0.3.241
 
 # Model provider SDKs (DeepSeek is reached via the OpenAI-compatible client)
 openai
